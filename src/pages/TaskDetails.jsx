@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api, { MEDIA_URL } from '../api';
+// import api, { MEDIA_URL } from '../api';
 import { AuthContext } from '../context/AuthContext';
 
 const TaskDetails = () => {
