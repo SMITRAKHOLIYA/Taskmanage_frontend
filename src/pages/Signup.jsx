@@ -137,15 +137,11 @@ const Signup = () => {
                                 animate={{ opacity: 1, height: 'auto' }}
                                 className="rounded-lg bg-red-500/10 border border-red-500/20 p-4"
                             >
-                                <div className="flex">
-                                    <div className="ml-3">
-                                        <h3 className="text-sm font-medium text-red-400">
-                                            Registration Failed
-                                        </h3>
-                                        <div className="mt-1 text-sm text-red-300">
-                                            <p>{error}</p>
-                                        </div>
-                                    </div>
+                                <div className="flex items-center gap-2 text-red-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 flex-shrink-0">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                                    </svg>
+                                    <p className="text-sm font-medium">{error}</p>
                                 </div>
                             </motion.div>
                         )}
