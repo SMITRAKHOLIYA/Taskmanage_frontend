@@ -39,47 +39,38 @@ export default defineConfig({
   ],
   server: {
     host: true,
-    // proxy: {
-    //   '/api': {
-    //     target: 'http://localhost:8080/api.php',
-    //     changeOrigin: true,
-    //     rewrite: (path) => path.replace(/^\/api/, '')
-    //   },
-    //   '/uploads': {
-    //     target: 'http://localhost:8080',
-    //     changeOrigin: true
-    //   },
-    //   '/attachments': {
-    //     target: 'http://localhost:8080',
-    //     changeOrigin: true
-    //   }
-    // }
-
     proxy: {
-      // Whenever you fetch starting with '/api', Vite will redirect it'/api': {
-      target: 'https://taskmanage.iceiy.com',
-      changeOrigin: true,
-      secure: false, // Set to false if you have SSL certificate issues locallyrewrite: (path) => path.replace(/^\/api/, '') // Removes '/api' before sending to PHP
+      '/api': {
+        target: 'http://localhost:8080/api.php',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      '/attachments': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
     }
-  
-},
-
+  },
   preview: {
-  host: true,
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8080/api.php',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/api/, '')
-    },
-    '/uploads': {
-      target: 'http://localhost:8080',
-      changeOrigin: true
-    },
-    '/attachments': {
-      target: 'http://localhost:8080',
-      changeOrigin: true
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080/api.php',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      '/attachments': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
     }
   }
-}
 });
