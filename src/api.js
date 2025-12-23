@@ -6,9 +6,8 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api.php";
 
 const api = axios.create({
     baseURL: API_URL,
-    // DO NOT set default Content-Type
-    // DO NOT use withCredentials
 });
+console.log("DEBUG: Axios instance created with baseURL:", API_URL);
 export const MEDIA_URL = API_URL.replace('/api', '');
 // Attach token ONLY when needed (not for login/register)
 api.interceptors.request.use(

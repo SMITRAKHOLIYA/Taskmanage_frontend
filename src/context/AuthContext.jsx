@@ -19,8 +19,9 @@ export const AuthProvider = ({ children }) => {
       formData.append("email", email);
       formData.append("password", password);
 
+      console.log("DEBUG: Posting to /auth/login with baseURL:", api.defaults.baseURL);
       const response = await api.post(
-        "/auth/login",
+        "auth/login",
         formData,
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       if (companyName) formData.append("company_name", companyName);
 
       await api.post(
-        "/auth/register",
+        "auth/register",
         formData,
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );
