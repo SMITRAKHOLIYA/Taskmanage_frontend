@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteBase /task_frontend/
+
+# Allow direct access to existing files and folders
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# React Router fallback
+RewriteRule . /task_frontend/index.html [L]

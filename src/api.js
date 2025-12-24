@@ -2,12 +2,13 @@ import axios from "axios";
 
 
 // IMPORTANT: api.php must be in baseURL
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api.php";
+const API_URL = import.meta.env.VITE_API_URL ?
+    (import.meta.env.VITE_API_URL.endsWith('/') ? import.meta.env.VITE_API_URL : `${import.meta.env.VITE_API_URL}/`) :
+    "http://localhost:8000/";
 
 const api = axios.create({
     baseURL: API_URL,
 });
-console.log("DEBUG: Axios instance created with baseURL:", API_URL);
 export const MEDIA_URL = API_URL.replace('/api', '');
 // Attach token ONLY when needed (not for login/register)
 api.interceptors.request.use(
@@ -27,7 +28,7 @@ api.interceptors.request.use(
             !config.url.includes("auth/login") &&
             !config.url.includes("auth/register")
         ) {
-            config.headers.Authorization = `Bearer ${user.token} `;
+            config.headers.Authorization = `Bearer ${user.token}`;
         }
 
         return config;

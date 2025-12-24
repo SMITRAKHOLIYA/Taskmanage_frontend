@@ -42,7 +42,7 @@ const Signup = () => {
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
                     <div className="text-center mb-8">
                         <div className="mx-auto h-24 w-24 flex items-center justify-center">
-                            <img src="/logo.png" alt="TaskMaster Logo" className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(0,246,255,0.5)]" />
+                            <img src="/task_frontend/logo.png" alt="TaskMaster Logo" className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(0,246,255,0.5)]" />
                         </div>
                         <h2 className="mt-6 text-3xl font-extrabold text-white tracking-tight">
                             Create Account

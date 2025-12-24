@@ -163,7 +163,7 @@ const Navbar = () => {
                         <Link to="/dashboard" className="flex items-center gap-3 group no-underline">
                             <div className="relative h-10 w-10">
                                 <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-200"></div>
-                                <img src="/logo.png" alt="TaskMaster Logo" className="relative h-full w-full object-contain" />
+                                <img src="/task_frontend/logo.png" alt="TaskMaster Logo" className="relative h-full w-full object-contain" />
                             </div>
                             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 hidden sm:block group-hover:to-primary-400 transition-all duration-300">
                                 TaskMaster
