@@ -7,14 +7,35 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [errors, setErrors] = useState({});
     const [error, setError] = useState('');
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
 
+    const validateForm = () => {
+        const newErrors = {};
+        if (!email) {
+            newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(email)) {
+            newErrors.email = 'Email is invalid';
+        }
+
+        if (!password) {
+            newErrors.password = 'Password is required';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("DEBUG: Login handleSubmit triggered");
         setError('');
+
+        if (!validateForm()) {
+            return;
+        }
+
         console.log("DEBUG: Calling login function with", email, password);
         const result = await login(email, password);
         console.log("DEBUG: Login result:", result);
@@ -56,7 +77,7 @@ const Login = () => {
                         </p>
                     </div>
 
-                    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="email-address" className="sr-only">Email address</label>
@@ -65,12 +86,15 @@ const Login = () => {
                                     name="email"
                                     type="email"
                                     autoComplete="email"
-                                    required
-                                    className="appearance-none relative block w-full px-4 py-3 border border-white/10 bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00f6ff] focus:border-transparent focus:z-10 sm:text-sm transition-all"
+                                    className={`appearance-none relative block w-full px-4 py-3 border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-[#00f6ff]'} bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent focus:z-10 sm:text-sm transition-all`}
                                     placeholder="Email address"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    onChange={(e) => {
+                                        setEmail(e.target.value);
+                                        if (errors.email) setErrors({ ...errors, email: '' });
+                                    }}
                                 />
+                                {errors.email && <p className="mt-1 text-xs text-red-500 pl-1">{errors.email}</p>}
                             </div>
                             <div className="relative">
                                 <label htmlFor="password" className="sr-only">Password</label>
@@ -79,11 +103,13 @@ const Login = () => {
                                     name="password"
                                     type={showPassword ? "text" : "password"}
                                     autoComplete="current-password"
-                                    required
-                                    className="appearance-none relative block w-full px-4 py-3 border border-white/10 bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00f6ff] focus:border-transparent focus:z-10 sm:text-sm transition-all pr-10"
+                                    className={`appearance-none relative block w-full px-4 py-3 border ${errors.password ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-[#00f6ff]'} bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent focus:z-10 sm:text-sm transition-all pr-10`}
                                     placeholder="Password"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        if (errors.password) setErrors({ ...errors, password: '' });
+                                    }}
                                 />
                                 <button
                                     type="button"
@@ -101,6 +127,7 @@ const Login = () => {
                                         </svg>
                                     )}
                                 </button>
+                                {errors.password && <p className="absolute -bottom-5 left-1 text-xs text-red-500">{errors.password}</p>}
                             </div>
                         </div>
 
@@ -119,7 +146,7 @@ const Login = () => {
                             </motion.div>
                         )}
 
-                        <div>
+                        <div className={errors.password ? "mt-8" : ""}>
                             <button
                                 type="submit"
                                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-[#00f6ff] to-[#a100ff] hover:shadow-[0_0_20px_rgba(0,246,255,0.4)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00f6ff] transition-all duration-300 transform hover:scale-[1.02]"

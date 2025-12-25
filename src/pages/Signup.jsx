@@ -9,13 +9,40 @@ const Signup = () => {
     const [password, setPassword] = useState('');
     const [isOwner, setIsOwner] = useState(false);
     const [companyName, setCompanyName] = useState('');
+    const [errors, setErrors] = useState({});
     const [error, setError] = useState('');
     const { register } = useContext(AuthContext);
     const navigate = useNavigate();
 
+    const validateForm = () => {
+        const newErrors = {};
+        if (!username) newErrors.username = 'Username is required';
+        if (!email) {
+            newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(email)) {
+            newErrors.email = 'Email is invalid';
+        }
+        if (!password) {
+            newErrors.password = 'Password is required';
+        } else if (password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
+        }
+
+        if (isOwner && !companyName) {
+            newErrors.companyName = 'Company Name is required for owners';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        if (!validateForm()) {
+            return;
+        }
 
         const role = isOwner ? 'owner' : 'user';
         const result = await register(username, email, password, role, isOwner ? companyName : null);
@@ -52,7 +79,7 @@ const Signup = () => {
                         </p>
                     </div>
 
-                    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="username" className="sr-only">Username</label>
@@ -61,12 +88,15 @@ const Signup = () => {
                                     name="username"
                                     type="text"
                                     autoComplete="username"
-                                    required
-                                    className="appearance-none relative block w-full px-4 py-3 border border-white/10 bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00f6ff] focus:border-transparent focus:z-10 sm:text-sm transition-all"
+                                    className={`appearance-none relative block w-full px-4 py-3 border ${errors.username ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-[#00f6ff]'} bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent focus:z-10 sm:text-sm transition-all`}
                                     placeholder="Username"
                                     value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
+                                    onChange={(e) => {
+                                        setUsername(e.target.value);
+                                        if (errors.username) setErrors({ ...errors, username: '' });
+                                    }}
                                 />
+                                {errors.username && <p className="mt-1 text-xs text-red-500 pl-1">{errors.username}</p>}
                             </div>
                             <div>
                                 <label htmlFor="email-address" className="sr-only">Email address</label>
@@ -75,12 +105,15 @@ const Signup = () => {
                                     name="email"
                                     type="email"
                                     autoComplete="email"
-                                    required
-                                    className="appearance-none relative block w-full px-4 py-3 border border-white/10 bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00f6ff] focus:border-transparent focus:z-10 sm:text-sm transition-all"
+                                    className={`appearance-none relative block w-full px-4 py-3 border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-[#00f6ff]'} bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent focus:z-10 sm:text-sm transition-all`}
                                     placeholder="Email address"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    onChange={(e) => {
+                                        setEmail(e.target.value);
+                                        if (errors.email) setErrors({ ...errors, email: '' });
+                                    }}
                                 />
+                                {errors.email && <p className="mt-1 text-xs text-red-500 pl-1">{errors.email}</p>}
                             </div>
                             <div>
                                 <label htmlFor="password" className="sr-only">Password</label>
@@ -89,12 +122,15 @@ const Signup = () => {
                                     name="password"
                                     type="password"
                                     autoComplete="new-password"
-                                    required
-                                    className="appearance-none relative block w-full px-4 py-3 border border-white/10 bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00f6ff] focus:border-transparent focus:z-10 sm:text-sm transition-all"
+                                    className={`appearance-none relative block w-full px-4 py-3 border ${errors.password ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-[#00f6ff]'} bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent focus:z-10 sm:text-sm transition-all`}
                                     placeholder="Password"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        if (errors.password) setErrors({ ...errors, password: '' });
+                                    }}
                                 />
+                                {errors.password && <p className="mt-1 text-xs text-red-500 pl-1">{errors.password}</p>}
                             </div>
 
                             <div className="flex items-center">
@@ -121,12 +157,15 @@ const Signup = () => {
                                         id="company-name"
                                         name="company-name"
                                         type="text"
-                                        required={isOwner}
-                                        className="appearance-none relative block w-full px-4 py-3 border border-white/10 bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00f6ff] focus:border-transparent focus:z-10 sm:text-sm transition-all"
+                                        className={`appearance-none relative block w-full px-4 py-3 border ${errors.companyName ? 'border-red-500 focus:ring-red-500' : 'border-white/10 focus:ring-[#00f6ff]'} bg-black/20 placeholder-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent focus:z-10 sm:text-sm transition-all`}
                                         placeholder="Company Name"
                                         value={companyName}
-                                        onChange={(e) => setCompanyName(e.target.value)}
+                                        onChange={(e) => {
+                                            setCompanyName(e.target.value);
+                                            if (errors.companyName) setErrors({ ...errors, companyName: '' });
+                                        }}
                                     />
+                                    {errors.companyName && <p className="mt-1 text-xs text-red-500 pl-1">{errors.companyName}</p>}
                                 </motion.div>
                             )}
                         </div>

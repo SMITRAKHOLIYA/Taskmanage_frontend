@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
@@ -50,17 +50,18 @@ const Navbar = () => {
     const [hidden, setHidden] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { scrollY } = useScroll();
+    const notificationRef = useRef(null);
 
     useMotionValueEvent(scrollY, "change", (latest) => {
         const previous = scrollY.getPrevious();
         if (latest > previous && latest > 150) {
             setHidden(true);
             setIsMobileMenuOpen(false); // Close mobile menu when scrolling down
+            setShowNotifications(false); // Close notifications on scroll
         } else {
             setHidden(false);
         }
     });
-
 
     const handleLogout = () => {
         logout();
@@ -68,7 +69,7 @@ const Navbar = () => {
     };
 
     useEffect(() => {
-        if (user && user.user.role === 'user') {
+        if (user) {
             fetchUnreadCount();
             triggerReminders();
             refreshUser();
@@ -81,6 +82,16 @@ const Navbar = () => {
         }
     }, [user?.user?.id]);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setShowNotifications(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const triggerReminders = async () => {
         try {
             await api.get('/notifications/check-reminders');
@@ -92,7 +103,7 @@ const Navbar = () => {
     const fetchUnreadCount = async () => {
         try {
             const response = await api.get('/notifications');
-            // Only show unread notifications
+            // Notification structure: { is_read: 0/1, ... }
             const unread = response.data.filter(n => n.is_read == 0).length;
             setUnreadCount(unread);
         } catch (error) {
@@ -196,24 +207,29 @@ const Navbar = () => {
                                 <ThemeToggle />
 
                                 {/* Notifications */}
-                                {user.user.role === 'user' && (
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setShowNotifications(!showNotifications)}
-                                            className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors relative"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                            </svg>
-                                            {unreadCount > 0 && (
-                                                <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900"></span>
-                                            )}
-                                        </button>
-                                        {showNotifications && (
-                                            <NotificationPanel onClose={() => setShowNotifications(false)} />
+                                <div className="relative" ref={notificationRef}>
+                                    <button
+                                        onClick={() => {
+                                            setShowNotifications(!showNotifications);
+                                            if (!showNotifications) fetchUnreadCount(); // Refresh when opening
+                                        }}
+                                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors relative outline-none focus:ring-2 focus:ring-primary-500"
+                                        aria-label="Notifications"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                        </svg>
+                                        {unreadCount > 0 && (
+                                            <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 ring-2 ring-white dark:ring-gray-900"></span>
+                                            </span>
                                         )}
-                                    </div>
-                                )}
+                                    </button>
+                                    {showNotifications && (
+                                        <NotificationPanel onClose={() => setShowNotifications(false)} />
+                                    )}
+                                </div>
 
                                 {/* User Profile (Desktop) */}
                                 <Link to="/profile" className="hidden sm:flex items-center gap-2 group">

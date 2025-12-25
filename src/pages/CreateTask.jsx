@@ -23,6 +23,22 @@ const CreateTask = () => {
     });
     const [projects, setProjects] = useState([]);
     const [projectTasks, setProjectTasks] = useState([]);
+    const [errors, setErrors] = useState({});
+
+    const validateForm = () => {
+        const newErrors = {};
+        if (!formData.title.trim()) {
+            newErrors.title = 'Title is required';
+        }
+        if (formData.is_recurring && !formData.start_date) {
+            newErrors.start_date = 'Start Date is required for recurring tasks';
+        }
+        if ((user?.user?.role === 'admin' || user?.user?.role === 'manager' || user?.user?.role === 'owner') && !formData.assigned_to) {
+            newErrors.assigned_to = 'Assign To is required';
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     useEffect(() => {
         if (user && (user.user.role === 'admin' || user.user.role === 'manager' || user.user.role === 'owner')) {
@@ -139,6 +155,11 @@ const CreateTask = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
         try {
             if (formData.is_recurring) {
                 await api.post('/recurring-tasks', formData);
@@ -173,11 +194,14 @@ const CreateTask = () => {
                                 type="text"
                                 name="title"
                                 id="title"
-                                className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                                className={`shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
                                 value={formData.title}
-                                onChange={handleChange}
-                                required
+                                onChange={(e) => {
+                                    handleChange(e);
+                                    if (errors.title) setErrors({ ...errors, title: '' });
+                                }}
                             />
+                            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
                         </div>
                     </div>
 
@@ -259,11 +283,14 @@ const CreateTask = () => {
                                                 type="date"
                                                 name="start_date"
                                                 id="start_date"
-                                                className="mt-1 shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                                className={`mt-1 shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${errors.start_date ? 'border-red-500 focus:ring-red-500' : ''}`}
                                                 value={formData.start_date}
-                                                onChange={handleChange}
-                                                required={formData.is_recurring}
+                                                onChange={(e) => {
+                                                    handleChange(e);
+                                                    if (errors.start_date) setErrors({ ...errors, start_date: '' });
+                                                }}
                                             />
+                                            {errors.start_date && <p className="mt-1 text-xs text-red-500">{errors.start_date}</p>}
                                         </div>
                                         <div className="sm:col-span-2">
                                             <label htmlFor="recurrence_trigger" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -438,9 +465,12 @@ const CreateTask = () => {
                                     <select
                                         id="assigned_to"
                                         name="assigned_to"
-                                        className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                        className={`shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${errors.assigned_to ? 'border-red-500 focus:ring-red-500' : ''}`}
                                         value={formData.assigned_to}
-                                        onChange={handleChange}
+                                        onChange={(e) => {
+                                            handleChange(e);
+                                            if (errors.assigned_to) setErrors({ ...errors, assigned_to: '' });
+                                        }}
                                     >
                                         <option value="">Select a user</option>
                                         {users.filter(u => u.role === 'user').map(u => (
@@ -449,6 +479,7 @@ const CreateTask = () => {
                                             </option>
                                         ))}
                                     </select>
+                                    {errors.assigned_to && <p className="mt-1 text-xs text-red-500">{errors.assigned_to}</p>}
                                 </div>
                             </div>
                         )}

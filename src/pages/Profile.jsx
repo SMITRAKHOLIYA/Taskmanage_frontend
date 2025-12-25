@@ -39,8 +39,9 @@ const Profile = () => {
     const generateAvatar = async () => {
         setUploading(true);
         setMessage('');
+        const username = user?.user?.username || 'user';
         // Using DiceBear for "Bitmoji-style" avatars
-        const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.user.username}`;
+        const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
 
         try {
             await api.post('/users/upload-profile-pic', { avatar_url: avatarUrl });
@@ -54,7 +55,9 @@ const Profile = () => {
         }
     };
 
-    if (!user) return <div className="text-white">Loading...</div>;
+    if (!user || !user.user) return <div className="text-white">Loading...</div>;
+
+    const usernameDisplay = user.user.username || 'User';
 
     return (
         <div className="p-8 max-w-4xl mx-auto">
@@ -83,7 +86,7 @@ const Profile = () => {
                                 />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-[#00f6ff] to-[#a100ff] flex items-center justify-center text-4xl font-bold text-white">
-                                    {user.user.username.charAt(0).toUpperCase()}
+                                    {usernameDisplay.charAt(0).toUpperCase()}
                                 </div>
                             )}
                         </div>
@@ -96,7 +99,7 @@ const Profile = () => {
                         </label>
                     </div>
 
-                    <h2 className="mt-4 text-2xl font-bold text-white">{user.user.username}</h2>
+                    <h2 className="mt-4 text-2xl font-bold text-white">{usernameDisplay}</h2>
                     <p className="text-gray-400">{user.user.email}</p>
 
                     <div className="mt-8 w-full max-w-md space-y-4">
