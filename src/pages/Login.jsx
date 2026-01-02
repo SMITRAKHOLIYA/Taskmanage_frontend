@@ -3,14 +3,23 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
+import logo from '../assets/logo.png';
+
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
     const [error, setError] = useState('');
-    const { login } = useContext(AuthContext);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { login, user } = useContext(AuthContext);
     const navigate = useNavigate();
+
+    React.useEffect(() => {
+        if (user) {
+            navigate(user.user.role === 'owner' ? '/owner-dashboard' : '/dashboard');
+        }
+    }, [user, navigate]);
 
     const validateForm = () => {
         const newErrors = {};
@@ -36,19 +45,26 @@ const Login = () => {
             return;
         }
 
-        console.log("DEBUG: Calling login function with", email, password);
-        const result = await login(email, password);
-        console.log("DEBUG: Login result:", result);
-        if (result.success) {
-            console.log("DEBUG: Login success, navigating...");
-            if (result.user.role === 'owner') {
-                navigate('/owner-dashboard');
+        setIsSubmitting(true);
+        try {
+            console.log("DEBUG: Calling login function with", email, password);
+            const result = await login(email, password);
+            console.log("DEBUG: Login result:", result);
+            if (result.success) {
+                console.log("DEBUG: Login success, navigating...");
+                if (result.user.role === 'owner') {
+                    navigate('/owner-dashboard');
+                } else {
+                    navigate('/dashboard');
+                }
             } else {
-                navigate('/dashboard');
+                console.log("DEBUG: Login failed with message:", result);
+                setError(result.message || 'Login failed');
             }
-        } else {
-            console.log("DEBUG: Login failed with message:", result);
-            setError(result.message || 'Login failed');
+        } catch (err) {
+            setError('An unexpected error occurred.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -67,7 +83,7 @@ const Login = () => {
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
                     <div className="text-center mb-8">
                         <div className="mx-auto h-24 w-24 flex items-center justify-center">
-                            <img src="/task_frontend/logo.png" alt="TaskMaster Logo" className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(0,246,255,0.5)]" />
+                            <img src={logo} alt="TaskMaster Logo" className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(0,246,255,0.5)]" />
                         </div>
                         <h2 className="mt-6 text-3xl font-extrabold text-white tracking-tight">
                             Welcome Back
@@ -149,9 +165,18 @@ const Login = () => {
                         <div className={errors.password ? "mt-8" : ""}>
                             <button
                                 type="submit"
-                                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-[#00f6ff] to-[#a100ff] hover:shadow-[0_0_20px_rgba(0,246,255,0.4)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00f6ff] transition-all duration-300 transform hover:scale-[1.02]"
+                                disabled={isSubmitting}
+                                className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-[#00f6ff] to-[#a100ff] hover:shadow-[0_0_20px_rgba(0,246,255,0.4)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00f6ff] transition-all duration-300 transform hover:scale-[1.02] ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
-                                Sign in
+                                {isSubmitting ? (
+                                    <span className="flex items-center">
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Signing in...
+                                    </span>
+                                ) : "Sign in"}
                             </button>
                         </div>
                     </form>

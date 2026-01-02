@@ -7,11 +7,12 @@ import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import CreateTask from './pages/CreateTask';
 import TaskDetails from './pages/TaskDetails';
+import EditTask from './pages/EditTask';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Trash from './pages/Trash';
 import TaskMasterLanding from './pages/TaskMasterLanding';
-import Navbar from './components/Navbar';
+import MainLayout from './components/MainLayout';
 import Reports from './pages/Reports';
 import Analytics from './pages/Analytics';
 
@@ -54,125 +55,117 @@ function App() {
 
               <Route path="/owner-dashboard" element={
                 <OwnerRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <OwnerDashboard />
-                  </div>
+                  </MainLayout>
                 </OwnerRoute>
               } />
 
               <Route path="/companies" element={
                 <OwnerRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <CompanyManagement />
-                  </div>
+                  </MainLayout>
                 </OwnerRoute>
               } />
 
               <Route path="/dashboard" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Dashboard />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
 
               <Route path="/tasks" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Tasks />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/kanban" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <KanbanBoard />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/create-task" element={
                 <AdminRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <CreateTask />
-                  </div>
+                  </MainLayout>
+                </AdminRoute>
+              } />
+              <Route path="/edit-task/:id" element={
+                <AdminRoute>
+                  <MainLayout>
+                    <EditTask />
+                  </MainLayout>
                 </AdminRoute>
               } />
               <Route path="/users" element={
                 <AdminRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Users />
-                  </div>
+                  </MainLayout>
                 </AdminRoute>
               } />
               <Route path="/projects" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Projects />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/projects/:id" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <ProjectDetails />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/settings" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Settings />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/profile" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Profile />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/tasks/:id" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <TaskDetails />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/trash" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Trash />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/reports" element={
                 <PrivateRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Reports />
-                  </div>
+                  </MainLayout>
                 </PrivateRoute>
               } />
               <Route path="/analytics" element={
                 <AdminRoute>
-                  <Navbar />
-                  <div className="container mx-auto px-4 pb-4 pt-28">
+                  <MainLayout>
                     <Analytics />
-                  </div>
+                  </MainLayout>
                 </AdminRoute>
               } />
 

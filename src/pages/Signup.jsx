@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { motion } from 'framer-motion';
+import logo from '../assets/logo.png';
 
 const Signup = () => {
     const [username, setUsername] = useState('');
@@ -11,8 +12,14 @@ const Signup = () => {
     const [companyName, setCompanyName] = useState('');
     const [errors, setErrors] = useState({});
     const [error, setError] = useState('');
-    const { register } = useContext(AuthContext);
+    const { register, user } = useContext(AuthContext);
     const navigate = useNavigate();
+
+    React.useEffect(() => {
+        if (user) {
+            navigate(user.user.role === 'owner' ? '/owner-dashboard' : '/dashboard');
+        }
+    }, [user, navigate]);
 
     const validateForm = () => {
         const newErrors = {};
@@ -69,7 +76,7 @@ const Signup = () => {
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
                     <div className="text-center mb-8">
                         <div className="mx-auto h-24 w-24 flex items-center justify-center">
-                            <img src="/task_frontend/logo.png" alt="TaskMaster Logo" className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(0,246,255,0.5)]" />
+                            <img src={logo} alt="TaskMaster Logo" className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(0,246,255,0.5)]" />
                         </div>
                         <h2 className="mt-6 text-3xl font-extrabold text-white tracking-tight">
                             Create Account

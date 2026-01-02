@@ -3,7 +3,7 @@ import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const NotificationPanel = ({ onClose }) => {
+const NotificationPanel = ({ onClose, positionClass }) => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const { user } = useContext(AuthContext);
@@ -68,7 +68,7 @@ const NotificationPanel = ({ onClose }) => {
     const unreadCount = notifications.filter(n => n.is_read == 0).length;
 
     return (
-        <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden transform transition-all duration-200 ease-out origin-top-right">
+        <div className={`absolute ${positionClass || "right-0 mt-3 origin-top-right w-80 sm:w-96"} bg-white dark:bg-gray-800 rounded-xl shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden transform transition-all duration-200 ease-out`}>
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                 <div className="flex items-center gap-2">

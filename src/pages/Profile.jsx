@@ -101,6 +101,11 @@ const Profile = () => {
 
                     <h2 className="mt-4 text-2xl font-bold text-white">{usernameDisplay}</h2>
                     <p className="text-gray-400">{user.user.email}</p>
+                    {user.user.company_name && (
+                        <p className="text-[#00f6ff] text-sm mt-1 uppercase tracking-wider font-semibold">
+                            {user.user.company_name}
+                        </p>
+                    )}
 
                     <div className="mt-8 w-full max-w-md space-y-4">
                         <button

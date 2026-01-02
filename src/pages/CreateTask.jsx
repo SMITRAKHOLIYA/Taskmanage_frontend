@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const CreateTask = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { user } = useContext(AuthContext);
     const [users, setUsers] = useState([]);
     const [formData, setFormData] = useState({
@@ -13,7 +14,7 @@ const CreateTask = () => {
         priority: 'medium',
         due_date: '',
         assigned_to: '',
-        project_id: '',
+        project_id: searchParams.get('project_id') || '',
         parent_id: '',
         is_recurring: false,
         frequency: 'daily',
@@ -168,7 +169,7 @@ const CreateTask = () => {
             }
             navigate('/tasks');
         } catch (error) {
-            console.error("Error creating task:", error);
+            console.error("Error creating task:", error?.response?.data);
             alert('Failed to create task');
         }
     };

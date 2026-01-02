@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 
-const ThemeToggle = () => {
+const ThemeToggle = ({ positionClass }) => {
     const { theme, setTheme } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -34,7 +34,7 @@ const ThemeToggle = () => {
             </button>
 
             {isOpen && (
-                <div className="origin-top-right absolute right-0 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50 dark:bg-gray-800 dark:ring-gray-700">
+                <div className={`absolute w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50 dark:bg-gray-800 dark:ring-gray-700 ${positionClass || "origin-top-right right-0 mt-2"}`}>
                     <div className="py-1">
                         {options.map((option) => (
                             <button
@@ -45,8 +45,8 @@ const ThemeToggle = () => {
                                     setIsOpen(false);
                                 }}
                                 className={`group flex items-center w-full px-4 py-2 text-sm ${theme === option.value
-                                        ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
-                                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                                    ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
+                                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                                     }`}
                             >
                                 <span className="mr-3">{option.icon}</span>

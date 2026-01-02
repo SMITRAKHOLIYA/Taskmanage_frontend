@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../api";
 import { motion } from 'framer-motion';
 
 const Reports = () => {
@@ -26,7 +28,7 @@ const Reports = () => {
                 return;
             }
 
-            const response = await axios.get(`http://localhost:8000/api.php/reports?period=${period}&page=${page}&limit=10`, {
+            const response = await axios.get(`${API_BASE_URL}/reports?period=${period}&page=${page}&limit=10`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -57,19 +59,19 @@ const Reports = () => {
                 <div className="flex space-x-4">
                     <button
                         onClick={() => setPeriod('weekly')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${period === 'weekly'
+                        className={`px - 4 py - 2 rounded - lg transition - colors ${period === 'weekly'
                             ? 'bg-[#00f6ff] text-black font-bold'
                             : 'bg-white/10 text-white hover:bg-white/20'
-                            }`}
+                            } `}
                     >
                         Weekly
                     </button>
                     <button
                         onClick={() => setPeriod('monthly')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${period === 'monthly'
+                        className={`px - 4 py - 2 rounded - lg transition - colors ${period === 'monthly'
                             ? 'bg-[#00f6ff] text-black font-bold'
                             : 'bg-white/10 text-white hover:bg-white/20'
-                            }`}
+                            } `}
                     >
                         Monthly
                     </button>
@@ -114,10 +116,10 @@ const Reports = () => {
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${report.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                                            <span className={`px - 2 py - 1 rounded - full text - xs font - bold uppercase tracking - wider ${report.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
                                                 report.role === 'manager' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
                                                     'bg-gray-500/20 text-gray-300 border border-gray-500/30'
-                                                }`}>
+                                                } `}>
                                                 {report.role}
                                             </span>
                                         </td>
@@ -150,10 +152,10 @@ const Reports = () => {
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1 || loading}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === 1 || loading
+                        className={`px - 4 py - 2 rounded - lg text - sm font - medium transition - colors ${currentPage === 1 || loading
                             ? 'bg-white/5 text-gray-500 cursor-not-allowed'
                             : 'bg-white/10 text-white hover:bg-white/20'
-                            }`}
+                            } `}
                     >
                         Previous
                     </button>
@@ -163,10 +165,10 @@ const Reports = () => {
                     <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages || loading}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentPage === totalPages || loading
+                        className={`px - 4 py - 2 rounded - lg text - sm font - medium transition - colors ${currentPage === totalPages || loading
                             ? 'bg-white/5 text-gray-500 cursor-not-allowed'
                             : 'bg-white/10 text-white hover:bg-white/20'
-                            }`}
+                            } `}
                     >
                         Next
                     </button>

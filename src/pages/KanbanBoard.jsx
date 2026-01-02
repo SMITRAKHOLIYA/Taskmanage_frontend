@@ -3,6 +3,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import TaskDetailsModal from '../components/TaskDetailsModal';
 
 const KanbanBoard = () => {
     const { user } = useContext(AuthContext);
@@ -12,6 +14,8 @@ const KanbanBoard = () => {
         in_progress: { tasks: [], page: 1, total: 0, totalPages: 1, loading: false },
         completed: { tasks: [], page: 1, total: 0, totalPages: 1, loading: false }
     });
+    const [selectedTaskId, setSelectedTaskId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const LIMIT = 5; // Keep lists short as requested
 
@@ -32,10 +36,10 @@ const KanbanBoard = () => {
             setColumnsData(prev => ({
                 ...prev,
                 [status]: {
-                    tasks: response.data.data,
+                    tasks: response.data?.data || [],
                     page: page,
-                    total: response.data.meta.total_items,
-                    totalPages: response.data.meta.total_pages,
+                    total: response.data?.meta?.total_items || 0,
+                    totalPages: response.data?.meta?.total_pages || 1,
                     loading: false
                 }
             }));
@@ -109,6 +113,18 @@ const KanbanBoard = () => {
         }
     };
 
+    const openTaskModal = (taskId) => {
+        setSelectedTaskId(taskId);
+        setIsModalOpen(true);
+    };
+
+    const handleTaskUpdate = () => {
+        // Refresh all columns to reflect changes (status, etc)
+        fetchColumnTasks('pending', columnsData.pending.page);
+        fetchColumnTasks('in_progress', columnsData.in_progress.page);
+        fetchColumnTasks('completed', columnsData.completed.page);
+    };
+
     const columns = [
         { id: 'pending', title: 'Pending', color: 'bg-yellow-500/10 border-yellow-500/20', titleColor: 'text-yellow-500' },
         { id: 'in_progress', title: 'In Progress', color: 'bg-blue-500/10 border-blue-500/20', titleColor: 'text-blue-500' },
@@ -180,9 +196,12 @@ const KanbanBoard = () => {
                                                 )}
                                             </div>
 
-                                            <Link to={`/tasks/${task.id}`} className="block mb-1.5 font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-500 transition-colors line-clamp-2">
+                                            <div
+                                                onClick={() => openTaskModal(task.id)}
+                                                className="block mb-1.5 font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-500 transition-colors line-clamp-2 cursor-pointer"
+                                            >
                                                 {task.title}
-                                            </Link>
+                                            </div>
 
                                             {task.description && (
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3 leading-relaxed">
@@ -239,6 +258,16 @@ const KanbanBoard = () => {
                     );
                 })}
             </div>
+
+            <AnimatePresence>
+                {isModalOpen && selectedTaskId && (
+                    <TaskDetailsModal
+                        taskId={selectedTaskId}
+                        onClose={() => setIsModalOpen(false)}
+                        onUpdate={handleTaskUpdate}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

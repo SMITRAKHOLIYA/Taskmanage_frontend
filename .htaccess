@@ -1,10 +1,28 @@
+Options -Indexes
 RewriteEngine On
 RewriteBase /
 
-# Allow direct access to existing files and folders
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+# 1. STOP: If request starts with dist/, let it pass (prevent loop)
+RewriteRule ^dist/ - [L]
 
-# React Router fallback
-RewriteRule . /index.html [L]
+# 2. INTERNAL REWRITE: If file exists in dist/, serve it
+RewriteCond %{DOCUMENT_ROOT}/task_frontend/dist/$1 -f
+RewriteRule ^(.*)$ dist/$1 [L]
+
+RewriteCond %{DOCUMENT_ROOT}/task_frontend/dist/$1 -d
+RewriteRule ^(.*)$ dist/$1 [L]
+
+# 3. ROOT ASSET FALLBACK: Check if request is for asset but without dist/ prefix
+# e.g. /assets/style.css -> /dist/assets/style.css
+RewriteCond %{DOCUMENT_ROOT}/task_frontend/dist/$1 -f
+RewriteRule ^(.+)$ dist/$1 [L]
+
+# 4. SPA FALLBACK: If not a file/dir, serve index.html from dist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . dist/index.html [L]
+
+# Correct MIME types
+AddType application/manifest+json .webmanifest
+AddType application/json .json
+

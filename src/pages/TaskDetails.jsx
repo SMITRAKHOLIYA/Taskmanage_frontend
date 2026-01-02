@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api, { MEDIA_URL } from '../api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -382,7 +382,7 @@ const TaskDetails = () => {
 
     return (
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
             <button
                 onClick={() => navigate('/tasks')}
                 className="mb-4 text-primary-600 hover:text-primary-500 font-medium flex items-center"
@@ -390,6 +390,45 @@ const TaskDetails = () => {
                 &larr; Back to Tasks
             </button>
 
+            {/* Header / Actions */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <nav className="flex mb-2" aria-label="Breadcrumb">
+                        <ol className="flex items-center space-x-2">
+                            <li><Link to="/tasks" className="text-gray-400 hover:text-white transition-colors">Tasks</Link></li>
+                            <li><span className="text-gray-600">/</span></li>
+                            <li className="text-white font-medium truncate max-w-[200px]">{task.title}</li>
+                        </ol>
+                    </nav>
+                    <h1 className="text-3xl font-bold text-white break-words">{task.title}</h1>
+                </div>
+
+                <div className="flex items-center gap-3 bg-[#1a1f2e] p-2 rounded-xl border border-white/10">
+                    {user && (user.user.role === 'admin' || user.user.role === 'manager' || user.user.role === 'owner') && (
+                        <>
+                            <Link
+                                to={`/edit-task/${task.id}`}
+                                className="px-4 py-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 font-medium transition-colors flex items-center border border-blue-500/20 no-underline"
+                            >
+                                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit
+                            </Link>
+
+                            <button
+                                onClick={() => setShowDeleteModal(true)}
+                                className="px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-medium transition-colors flex items-center border border-red-500/20"
+                            >
+                                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
             <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg mb-8 transition-colors duration-200">
                 <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
                     <div>

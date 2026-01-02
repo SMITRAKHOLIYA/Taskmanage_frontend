@@ -4,7 +4,7 @@ import api from '../api';
 import { Link } from 'react-router-dom';
 import Calendar from '../components/Calendar';
 import Modal from '../components/Modal';
-import ActivityFeed from '../components/ActivityFeed';
+import TaskInsights from '../components/TaskInsights';
 
 const Dashboard = ({ showTitle = true }) => {
     const [recentTasks, setRecentTasks] = useState([]);
@@ -77,8 +77,8 @@ const Dashboard = ({ showTitle = true }) => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     return (
-        <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-4 md:py-6">
+            <div className="w-full px-2 sm:px-6 lg:px-8">
                 {/* Productivity Hero Section */}
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] to-[#1e293b] p-8 text-white shadow-2xl mb-8">
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-gradient-to-br from-[#00f6ff] to-[#a100ff] opacity-20 blur-3xl"></div>
@@ -192,9 +192,9 @@ const Dashboard = ({ showTitle = true }) => {
 
                 {user && (user.user.role === 'admin' || user.user.role === 'manager' || user.user.role === 'owner') && (
                     <div className="mt-8">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">User Activity Feed</h3>
-                        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md p-6 max-h-96 overflow-y-auto">
-                            <ActivityFeed />
+                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">Task Insights</h3>
+                        <div className="mb-8">
+                            <TaskInsights tasks={allTasks} />
                         </div>
                     </div>
                 )}
