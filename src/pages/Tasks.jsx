@@ -1,9 +1,13 @@
 import React, { useEffect, useState, useContext } from 'react';
 import api from '../api';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
+import { useSync } from '../context/SyncContext';
+import { AnimatePresence } from 'framer-motion';
 
 import ConfirmationModal from '../components/ConfirmationModal';
+import TaskDetailsModal from '../components/TaskDetailsModal';
 
 const Tasks = () => {
     const [tasks, setTasks] = useState([]);
@@ -11,13 +15,19 @@ const Tasks = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState(null);
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
+    const { taskUpdateTrigger } = useSync();
+    const navigate = useNavigate();
 
     // Filter & Sort State
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPriority, setFilterPriority] = useState('');
+    const [filterProject, setFilterProject] = useState('');
+    const [projects, setProjects] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('created_at');
     const [sortOrder, setSortOrder] = useState('desc');
+    const [showCompleted, setShowCompleted] = useState(false);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -25,9 +35,30 @@ const Tasks = () => {
     const [totalItems, setTotalItems] = useState(0);
     const limit = 10;
 
+    // Modal State
+    const [selectedTaskId, setSelectedTaskId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Quick Add State
+    const [quickTaskTitle, setQuickTaskTitle] = useState('');
+    const [quickAdding, setQuickAdding] = useState(false);
+
+    useEffect(() => {
+        fetchProjects();
+    }, []);
+
     useEffect(() => {
         fetchTasks();
-    }, [currentPage, filterStatus, filterPriority, sortBy, sortOrder, searchQuery]);
+    }, [currentPage, filterStatus, filterPriority, filterProject, sortBy, sortOrder, searchQuery, showCompleted, taskUpdateTrigger]);
+
+    const fetchProjects = async () => {
+        try {
+            const response = await api.get('/projects');
+            setProjects(response.data);
+        } catch (error) {
+            console.error("Error fetching projects", error);
+        }
+    };
 
     const fetchTasks = async () => {
         setLoading(true);
@@ -37,12 +68,13 @@ const Tasks = () => {
                 limit: limit,
                 status: filterStatus === 'all' ? '' : filterStatus,
                 priority: filterPriority,
+                project_id: filterProject,
                 search: searchQuery,
                 sort_by: sortBy,
-                sort_order: sortOrder
+                sort_order: sortOrder,
+                exclude_status: (filterStatus === 'all' && !showCompleted) ? 'completed' : ''
             };
 
-            // Convert params to query string
             const queryString = new URLSearchParams(params).toString();
             const response = await api.get(`/tasks?${queryString}`);
 
@@ -51,7 +83,6 @@ const Tasks = () => {
                 setTotalPages(response.data.meta.total_pages);
                 setTotalItems(response.data.meta.total_items);
             } else {
-                // Fallback for old API structure if needed, though we updated it
                 setTasks([]);
             }
         } catch (error) {
@@ -61,7 +92,8 @@ const Tasks = () => {
         }
     };
 
-    const confirmDelete = (id) => {
+    const confirmDelete = (e, id) => {
+        e.stopPropagation();
         setTaskToDelete(id);
         setShowDeleteModal(true);
     };
@@ -80,7 +112,39 @@ const Tasks = () => {
 
     const handleSearch = (e) => {
         setSearchQuery(e.target.value);
-        setCurrentPage(1); // Reset to first page on search
+        setCurrentPage(1);
+    };
+
+    const handleQuickAdd = async (e) => {
+        if (e.key === 'Enter' && quickTaskTitle.trim()) {
+            setQuickAdding(true);
+            try {
+                // Default values for quick add
+                const newTask = {
+                    title: quickTaskTitle,
+                    status: 'pending',
+                    priority: 'medium'
+                };
+                await api.post('/tasks', newTask);
+                setQuickTaskTitle('');
+                notify('success', 'Task added successfully!');
+                fetchTasks(); // Refresh list
+            } catch (error) {
+                console.error("Error adding quick task", error);
+                notify('error', 'Failed to add task.');
+            } finally {
+                setQuickAdding(false);
+            }
+        }
+    };
+
+    const openTaskModal = (taskId) => {
+        setSelectedTaskId(taskId);
+        setIsModalOpen(true);
+    };
+
+    const handleTaskUpdate = () => {
+        fetchTasks();
     };
 
     return (
@@ -111,7 +175,20 @@ const Tasks = () => {
 
             {/* Filters & Controls */}
             <div className="bg-white dark:bg-gray-800 p-4 shadow rounded-lg mb-6 transition-colors duration-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Quick Add Input */}
+                <div className="mb-6">
+                    <input
+                        type="text"
+                        className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Quick Add: Type task title and press Enter..."
+                        value={quickTaskTitle}
+                        onChange={(e) => setQuickTaskTitle(e.target.value)}
+                        onKeyDown={handleQuickAdd}
+                        disabled={quickAdding}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     {/* Search */}
                     <div className="lg:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
@@ -155,6 +232,21 @@ const Tasks = () => {
                         </select>
                     </div>
 
+                    {/* Project Filter */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+                        <select
+                            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md transition-colors duration-200"
+                            value={filterProject}
+                            onChange={(e) => { setFilterProject(e.target.value); setCurrentPage(1); }}
+                        >
+                            <option value="">All Projects</option>
+                            {Array.isArray(projects) && projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.title}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Sort By */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort By</label>
@@ -178,6 +270,25 @@ const Tasks = () => {
                             </button>
                         </div>
                     </div>
+
+                    {/* Show Completed Toggle */}
+                    <div className="flex items-end pb-2">
+                        <label className="flex items-center cursor-pointer">
+                            <div className="relative">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={showCompleted}
+                                    onChange={() => { setShowCompleted(!showCompleted); setCurrentPage(1); }}
+                                />
+                                <div className={`block w-10 h-6 rounded-full transition-colors duration-200 ${showCompleted ? 'bg-primary-500' : 'bg-gray-400 dark:bg-gray-600'}`}></div>
+                                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 transform ${showCompleted ? 'translate-x-4' : ''}`}></div>
+                            </div>
+                            <div className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Show Completed
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -188,13 +299,16 @@ const Tasks = () => {
                 ) : (
                     <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                         {tasks.map(task => (
-                            <li key={task.id}>
+                            <li key={task.id}
+                                onClick={() => openTaskModal(task.id)}
+                                className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${task.status === 'completed' ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                            >
                                 <div className="px-4 py-4 sm:px-6">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                                         <div className="flex-1 min-w-0 w-full">
-                                            <Link to={`/tasks/${task.id}`} className="text-lg font-medium text-primary-600 truncate hover:text-primary-500 no-underline block">
+                                            <div className="text-lg font-medium text-primary-600 truncate">
                                                 {task.title}
-                                            </Link>
+                                            </div>
                                             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                                 {task.description || <span className="italic text-gray-400">No description provided</span>}
                                             </p>
@@ -204,7 +318,8 @@ const Tasks = () => {
                                                 ${task.status === 'completed' ? 'bg-green-100 text-green-800' :
                                                     task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                                                         task.status === 'expired' ? 'bg-gray-100 text-gray-800' :
-                                                            'bg-yellow-100 text-yellow-800'}`}>
+                                                            'bg-yellow-100 text-yellow-800'
+                                                }`}>
                                                 {task.status.replace('_', ' ')}
                                             </span>
                                             {task.is_extended == 1 && (
@@ -216,6 +331,7 @@ const Tasks = () => {
                                                 <div className="flex items-center space-x-2 mt-1">
                                                     <Link
                                                         to={`/edit-task/${task.id}`}
+                                                        onClick={(e) => e.stopPropagation()}
                                                         className="p-1 text-gray-500 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-100"
                                                         title="Edit Task"
                                                     >
@@ -224,7 +340,7 @@ const Tasks = () => {
                                                         </svg>
                                                     </Link>
                                                     <button
-                                                        onClick={() => confirmDelete(task.id)}
+                                                        onClick={(e) => confirmDelete(e, task.id)}
                                                         className="p-1 text-gray-500 hover:text-red-600 transition-colors rounded-full hover:bg-red-100"
                                                         title="Delete Task"
                                                     >
@@ -360,6 +476,15 @@ const Tasks = () => {
                     </div>
                 </div>
             )}
+            <AnimatePresence>
+                {isModalOpen && selectedTaskId && (
+                    <TaskDetailsModal
+                        taskId={selectedTaskId}
+                        onClose={() => setIsModalOpen(false)}
+                        onUpdate={handleTaskUpdate}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

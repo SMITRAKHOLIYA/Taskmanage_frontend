@@ -42,7 +42,7 @@ const TaskInsights = ({ tasks = [] }) => {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             {/* Priority Distribution */}
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -56,7 +56,7 @@ const TaskInsights = ({ tasks = [] }) => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
                     </svg>
-                    Topic Distribution
+                    Task Priorities
                 </h3>
 
                 <div className="space-y-4">
@@ -135,12 +135,16 @@ const TaskInsights = ({ tasks = [] }) => {
                                         <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        Due: {task.due_date}
+                                        Due: {new Date(task.due_date).toLocaleDateString(undefined, {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        })}
                                     </span>
                                 </div>
                                 <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${task.priority === 'high' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                        task.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                            'bg-green-500/10 text-green-400 border-green-500/20'
+                                    task.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                        'bg-green-500/10 text-green-400 border-green-500/20'
                                     }`}>
                                     {task.priority}
                                 </span>

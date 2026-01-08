@@ -2,11 +2,13 @@ import React, { useState, useEffect, useContext } from 'react';
 import api from '../api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 const CreateTask = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
     const [users, setUsers] = useState([]);
     const [formData, setFormData] = useState({
         title: '',
@@ -20,7 +22,8 @@ const CreateTask = () => {
         frequency: 'daily',
         start_date: '',
         recurrence_trigger: 'schedule',
-        questions: []
+        questions: [],
+        requires_execution_workflow: false // Default to false
     });
     const [projects, setProjects] = useState([]);
     const [projectTasks, setProjectTasks] = useState([]);
@@ -167,10 +170,11 @@ const CreateTask = () => {
             } else {
                 await api.post('/tasks', formData);
             }
+            notify.success('Task created successfully!');
             navigate('/tasks');
         } catch (error) {
             console.error("Error creating task:", error?.response?.data);
-            alert('Failed to create task');
+            notify.error(error?.response?.data?.message || 'Failed to create task');
         }
     };
 
@@ -222,7 +226,71 @@ const CreateTask = () => {
                         </div>
                     </div>
 
+                    {(user?.user?.role === 'admin' || user?.user?.role === 'manager' || user?.user?.role === 'owner') && (
+                        <div className="relative flex items-start mt-4">
+                            <div className="flex items-center h-5">
+                                <input
+                                    id="requires_execution_workflow"
+                                    name="requires_execution_workflow"
+                                    type="checkbox"
+                                    className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
+                                    checked={formData.requires_execution_workflow}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="ml-3 text-sm">
+                                <label htmlFor="requires_execution_workflow" className="font-medium text-gray-700 dark:text-gray-300">
+                                    Require Execution Workflow
+                                </label>
+                                <p className="text-gray-500 dark:text-gray-400">
+                                    If enabled, this task must go through the formal execution stages. Disable for simple task tracking.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                        <div className="sm:col-span-3">
+                            <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Project
+                            </label>
+                            <div className="mt-1">
+                                <select
+                                    id="project_id"
+                                    name="project_id"
+                                    className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    value={formData.project_id}
+                                    onChange={handleProjectChange}
+                                >
+                                    <option value="">None</option>
+                                    {projects.map(p => (
+                                        <option key={p.id} value={p.id}>{p.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-3">
+                            <label htmlFor="parent_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Parent Task
+                            </label>
+                            <div className="mt-1">
+                                <select
+                                    id="parent_id"
+                                    name="parent_id"
+                                    className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    value={formData.parent_id}
+                                    onChange={handleChange}
+                                    disabled={!formData.project_id}
+                                >
+                                    <option value="">None</option>
+                                    {projectTasks.map(t => (
+                                        <option key={t.id} value={t.id}>{t.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
                         <div className="sm:col-span-3">
                             <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Priority
@@ -485,46 +553,7 @@ const CreateTask = () => {
                             </div>
                         )}
 
-                        <div className="sm:col-span-3">
-                            <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Project
-                            </label>
-                            <div className="mt-1">
-                                <select
-                                    id="project_id"
-                                    name="project_id"
-                                    className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                    value={formData.project_id}
-                                    onChange={handleProjectChange}
-                                >
-                                    <option value="">None</option>
-                                    {projects.map(p => (
-                                        <option key={p.id} value={p.id}>{p.title}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
 
-                        <div className="sm:col-span-3">
-                            <label htmlFor="parent_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Parent Task
-                            </label>
-                            <div className="mt-1">
-                                <select
-                                    id="parent_id"
-                                    name="parent_id"
-                                    className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                    value={formData.parent_id}
-                                    onChange={handleChange}
-                                    disabled={!formData.project_id}
-                                >
-                                    <option value="">None</option>
-                                    {projectTasks.map(t => (
-                                        <option key={t.id} value={t.id}>{t.title}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
                     </div>
 
                     <div className="flex justify-end">
@@ -542,9 +571,9 @@ const CreateTask = () => {
                             Create Task
                         </button>
                     </div>
-                </form >
-            </div >
-        </div >
+                </form>
+            </div>
+        </div>
     );
 };
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext, useMemo } from 'react';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -16,6 +17,7 @@ const Users = () => {
 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
 
     // New State for Enhancements
     const [searchTerm, setSearchTerm] = useState('');
@@ -110,8 +112,10 @@ const Users = () => {
             fetchUsers();
             setShowDeleteModal(false);
             setUserToDelete(null);
+            notify.success('User deleted successfully');
         } catch (error) {
-            alert('Failed to delete user');
+            console.error("Error deleting user", error);
+            notify.error('Failed to delete user');
         }
     };
 
@@ -122,8 +126,10 @@ const Users = () => {
             setShowModal(false);
             setFormData({ username: '', email: '', password: '', role: 'user' });
             fetchUsers();
+            notify.success('User created successfully');
         } catch (error) {
-            alert('Failed to create user');
+            console.error("Error creating user", error);
+            notify.error(error.response?.data?.message || 'Failed to create user');
         }
     };
 
@@ -141,24 +147,28 @@ const Users = () => {
 
     const [showPerformanceModal, setShowPerformanceModal] = useState(false);
     const [performanceData, setPerformanceData] = useState(null);
+    const [startDate, setStartDate] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30); // Default last 30 days
+        return d.toISOString().split('T')[0];
+    });
+    const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     const handleOpenPerformance = async () => {
         setShowPerformanceModal(true);
-        // Fetch specific analytics if needed, or purely Aggregate from existing Users/Tasks if we had them.
-        // For now, we'll generate rich insights based on the existing `users` list + mock task distribution
-        // to match the requested "donut chart" and "professional" look.
-
-        // Mock distribution for the donut
-        const distribution = [
-            { name: 'High Performers', value: users.filter(u => (u.points || 0) > 100).length || 5, color: '#10B981' }, // Green
-            { name: 'Average', value: users.filter(u => (u.points || 0) <= 100 && (u.points || 0) > 50).length || 8, color: '#3B82F6' }, // Blue
-            { name: 'Needs Imp.', value: users.filter(u => (u.points || 0) <= 50).length || 3, color: '#F59E0B' }, // Yellow
-        ];
-
-        // Top 5 Users by Points
-        const topUsers = [...users].sort((a, b) => (parseInt(b.points) || 0) - (parseInt(a.points) || 0)).slice(0, 5);
-
-        setPerformanceData({ distribution, topUsers });
+        try {
+            // Fetch real analytics with dates
+            const response = await api.get(`/analytics/performance?start_date=${startDate}&end_date=${endDate}`);
+            setPerformanceData(response.data);
+        } catch (error) {
+            console.error("Error fetching performance data", error);
+            notify.error("Failed to load performance metrics");
+            // Fallback empty structure
+            setPerformanceData({
+                distribution: [],
+                topUsers: []
+            });
+        }
     };
 
     return (
@@ -173,17 +183,17 @@ const Users = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#1a1f2e] border border-white/10 p-6 rounded-2xl shadow-lg">
-                    <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider">Total Users</h3>
-                    <p className="text-3xl font-bold text-white mt-2">{stats.totalUsers}</p>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 p-6 rounded-2xl shadow-lg">
+                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider">Total Users</h3>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{stats.totalUsers}</p>
                 </motion.div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-[#1a1f2e] border border-white/10 p-6 rounded-2xl shadow-lg">
-                    <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider">Total Points Awarded</h3>
-                    <p className="text-3xl font-bold text-[#00f6ff] mt-2">{stats.totalPoints}</p>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 p-6 rounded-2xl shadow-lg">
+                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider">Total Points Awarded</h3>
+                    <p className="text-3xl font-bold text-cyan-500 dark:text-[#00f6ff] mt-2">{stats.totalPoints}</p>
                 </motion.div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-[#1a1f2e] border border-white/10 p-6 rounded-2xl shadow-lg">
-                    <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider">New Users (This Month)</h3>
-                    <p className="text-3xl font-bold text-green-400 mt-2">{stats.newUsersThisMonth}</p>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 p-6 rounded-2xl shadow-lg">
+                    <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider">New Users (This Month)</h3>
+                    <p className="text-3xl font-bold text-green-500 dark:text-green-400 mt-2">{stats.newUsersThisMonth}</p>
                 </motion.div>
             </div>
 
@@ -196,7 +206,7 @@ const Users = () => {
                     <input
                         type="text"
                         placeholder="Search users..."
-                        className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                        className="w-full bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -205,7 +215,7 @@ const Users = () => {
                     <div className="flex gap-3">
                         <button
                             onClick={handleOpenPerformance}
-                            className="inline-flex items-center px-6 py-3 rounded-xl bg-[#1a1f2e] border border-[#00f6ff]/30 text-[#00f6ff] font-bold shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:bg-[#00f6ff]/10 transform hover:-translate-y-0.5 transition-all duration-200"
+                            className="inline-flex items-center px-6 py-3 rounded-xl bg-white dark:bg-[#1a1f2e] border border-cyan-500/30 text-cyan-600 dark:text-[#00f6ff] font-bold shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:bg-cyan-50 dark:hover:bg-[#00f6ff]/10 transform hover:-translate-y-0.5 transition-all duration-200"
                         >
                             <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -226,31 +236,31 @@ const Users = () => {
             </div>
 
             {/* Table */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+            <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="border-b border-white/10 bg-white/5">
-                                <th onClick={() => handleSort('username')} className="p-5 text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-white transition-colors">
+                            <tr className="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
+                                <th onClick={() => handleSort('username')} className="p-5 text-gray-500 dark:text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-gray-700 dark:hover:text-white transition-colors">
                                     <div className="flex items-center">User {sortConfig.key === 'username' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</div>
                                 </th>
-                                <th onClick={() => handleSort('role')} className="p-5 text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-white transition-colors">
+                                <th onClick={() => handleSort('role')} className="p-5 text-gray-500 dark:text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-gray-700 dark:hover:text-white transition-colors">
                                     <div className="flex items-center">Role {sortConfig.key === 'role' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</div>
                                 </th>
-                                <th className="p-5 text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-white transition-colors">
+                                <th className="p-5 text-gray-500 dark:text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-gray-700 dark:hover:text-white transition-colors">
                                     <div className="flex items-center">Company</div>
                                 </th>
-                                <th onClick={() => handleSort('points')} className="p-5 text-gray-400 font-medium tracking-wider text-sm uppercase text-center cursor-pointer hover:text-white transition-colors">
+                                <th onClick={() => handleSort('points')} className="p-5 text-gray-500 dark:text-gray-400 font-medium tracking-wider text-sm uppercase text-center cursor-pointer hover:text-gray-700 dark:hover:text-white transition-colors">
                                     <div className="flex items-center justify-center">Points {sortConfig.key === 'points' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</div>
                                 </th>
-                                <th onClick={() => handleSort('created_at')} className="p-5 text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-white transition-colors">
+                                <th onClick={() => handleSort('created_at')} className="p-5 text-gray-500 dark:text-gray-400 font-medium tracking-wider text-sm uppercase cursor-pointer hover:text-gray-700 dark:hover:text-white transition-colors">
                                     <div className="flex items-center">Joined {sortConfig.key === 'created_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</div>
                                 </th>
 
-                                <th className="p-5 text-gray-400 font-medium tracking-wider text-sm uppercase text-right">Actions</th>
+                                <th className="p-5 text-gray-500 dark:text-gray-400 font-medium tracking-wider text-sm uppercase text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-gray-200 dark:divide-white/5">
                             <AnimatePresence>
                                 {paginatedUsers.map((u, index) => (
                                     <motion.tr
@@ -259,7 +269,7 @@ const Users = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, x: -10 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className="hover:bg-white/5 transition-colors group"
+                                        className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
                                     >
                                         <td className="p-5">
                                             <div className="flex items-center">
@@ -267,30 +277,30 @@ const Users = () => {
                                                     {u.username.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <div className="text-white font-medium">{u.username}</div>
-                                                    <div className="text-gray-400 text-xs">{u.email}</div>
+                                                    <div className="text-gray-900 dark:text-white font-medium">{u.username}</div>
+                                                    <div className="text-gray-500 dark:text-gray-400 text-xs">{u.email}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-5">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
-                                                u.role === 'manager' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' :
-                                                    'bg-green-500/20 text-green-300 border-green-500/30'
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${u.role === 'admin' ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-500/30' :
+                                                u.role === 'manager' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-500/30' :
+                                                    'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-300 border-green-200 dark:border-green-500/30'
                                                 }`}>
                                                 {u.role}
                                             </span>
                                         </td>
                                         <td className="p-5">
-                                            <span className="text-gray-300 text-sm font-medium">
+                                            <span className="text-gray-600 dark:text-gray-300 text-sm font-medium">
                                                 {u.company_name || 'N/A'}
                                             </span>
                                         </td>
                                         <td className="p-5 text-center">
-                                            <span className="text-[#00f6ff] font-bold font-mono text-lg drop-shadow-[0_0_5px_rgba(0,246,255,0.5)]">
+                                            <span className="text-cyan-600 dark:text-[#00f6ff] font-bold font-mono text-lg dark:drop-shadow-[0_0_5px_rgba(0,246,255,0.5)]">
                                                 {u.points || 0}
                                             </span>
                                         </td>
-                                        <td className="p-5 text-gray-300 text-sm">
+                                        <td className="p-5 text-gray-600 dark:text-gray-300 text-sm">
                                             {new Date(u.created_at).toLocaleDateString()}
                                         </td>
 
@@ -298,7 +308,7 @@ const Users = () => {
                                             <div className="flex items-center justify-end space-x-2 transition-opacity">
                                                 <button
                                                     onClick={() => handleViewActivity(u.id)}
-                                                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+                                                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                                                     title="View Activity"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -309,7 +319,7 @@ const Users = () => {
                                                 {u.id !== user.user.id && (
                                                     <button
                                                         onClick={() => confirmDelete(u.id)}
-                                                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                                                        className="p-2 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
                                                         title="Delete User"
                                                     >
                                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -328,15 +338,15 @@ const Users = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="p-4 border-t border-white/10 flex items-center justify-between bg-white/5">
-                        <div className="text-sm text-gray-400">
-                            Showing <span className="font-medium text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-white">{Math.min(currentPage * itemsPerPage, processedUsers.length)}</span> of <span className="font-medium text-white">{processedUsers.length}</span> results
+                    <div className="p-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-between bg-gray-50 dark:bg-white/5">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Showing <span className="font-medium text-gray-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-gray-900 dark:text-white">{Math.min(currentPage * itemsPerPage, processedUsers.length)}</span> of <span className="font-medium text-gray-900 dark:text-white">{processedUsers.length}</span> results
                         </div>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                 disabled={currentPage === 1}
-                                className="px-3 py-1 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-3 py-1 rounded-lg bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-transparent hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 Previous
                             </button>
@@ -373,10 +383,10 @@ const Users = () => {
                                         onClick={() => typeof page === 'number' && setCurrentPage(page)}
                                         disabled={page === '...'}
                                         className={`px-3 py-1 rounded-lg transition-colors ${page === '...'
-                                            ? 'bg-white/5 text-gray-500 cursor-default'
+                                            ? 'bg-transparent text-gray-500 cursor-default'
                                             : currentPage === page
                                                 ? 'bg-primary-600 text-white'
-                                                : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                                : 'bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-transparent hover:bg-gray-100 dark:hover:bg-white/10'
                                             }`}
                                     >
                                         {page}
@@ -386,7 +396,7 @@ const Users = () => {
                             <button
                                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-1 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-3 py-1 rounded-lg bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-transparent hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 Next
                             </button>
@@ -410,42 +420,42 @@ const Users = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative bg-[#1a1f2e] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                            className="relative bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
                         >
                             <form onSubmit={handleSubmit} className="p-6">
-                                <h3 className="text-xl font-bold text-white mb-6">Add New User</h3>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Add New User</h3>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
-                                        <input type="text" required className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Username</label>
+                                        <input type="text" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                             value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                                        <input type="email" required className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Email</label>
+                                        <input type="email" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                             value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
-                                        <input type="password" required className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Password</label>
+                                        <input type="password" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                             value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1">Role</label>
-                                        <select className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Role</label>
+                                        <select className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
                                             value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                                            <option value="user" className="bg-[#1a1f2e] text-white">User</option>
+                                            <option value="user" className="bg-white dark:bg-[#1a1f2e] text-gray-900 dark:text-white">User</option>
                                             {user.user.role === 'owner' && (
                                                 <>
-                                                    <option value="manager" className="bg-[#1a1f2e] text-white">Manager</option>
-                                                    <option value="admin" className="bg-[#1a1f2e] text-white">Admin</option>
+                                                    <option value="manager" className="bg-white dark:bg-[#1a1f2e] text-gray-900 dark:text-white">Manager</option>
+                                                    <option value="admin" className="bg-white dark:bg-[#1a1f2e] text-gray-900 dark:text-white">Admin</option>
                                                 </>
                                             )}
                                         </select>
                                     </div>
                                 </div>
                                 <div className="mt-8 flex justify-end gap-3">
-                                    <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+                                    <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                                         Cancel
                                     </button>
                                     <button type="submit" className="px-6 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium shadow-lg shadow-primary-600/20 transition-all">
@@ -455,11 +465,12 @@ const Users = () => {
                             </form>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
+                )
+                }
+            </AnimatePresence >
 
             {/* Activity Modal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {showActivityModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <motion.div
@@ -473,12 +484,12 @@ const Users = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative bg-[#1a1f2e] border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+                            className="relative bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
                         >
                             <div className="p-6">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-xl font-bold text-white">User Activity</h3>
-                                    <button onClick={() => setShowActivityModal(false)} className="text-gray-400 hover:text-white">
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">User Activity</h3>
+                                    <button onClick={() => setShowActivityModal(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -488,14 +499,14 @@ const Users = () => {
                                     {activityLogs.length > 0 ? (
                                         <ul className="space-y-4">
                                             {activityLogs.map((log) => (
-                                                <li key={log.id} className="bg-white/5 rounded-xl p-4 border border-white/5">
+                                                <li key={log.id} className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/5">
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-sm font-bold text-white bg-primary-500/20 text-primary-300 px-2 py-1 rounded text-xs uppercase tracking-wide">{log.action}</span>
-                                                        <span className="text-xs text-gray-500">{new Date(log.created_at).toLocaleString()}</span>
+                                                        <span className="text-sm font-bold bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 px-2 py-1 rounded text-xs uppercase tracking-wide">{log.action}</span>
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400">{new Date(log.created_at).toLocaleString()}</span>
                                                     </div>
-                                                    <p className="text-sm text-gray-300">{log.details}</p>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-300">{log.details}</p>
                                                     {log.task_title && (
-                                                        <div className="mt-2 flex items-center text-xs text-primary-400 bg-primary-500/10 px-2 py-1 rounded w-fit">
+                                                        <div className="mt-2 flex items-center text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10 px-2 py-1 rounded w-fit">
                                                             <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                                                             </svg>
@@ -506,7 +517,7 @@ const Users = () => {
                                             ))}
                                         </ul>
                                     ) : (
-                                        <div className="text-center py-12 text-gray-500">
+                                        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                                             <svg className="w-12 h-12 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
@@ -518,12 +529,12 @@ const Users = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence >
 
 
 
             {/* Success Modal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {showSuccessModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <motion.div
@@ -537,28 +548,28 @@ const Users = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative bg-[#1a1f2e] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-8"
+                            className="relative bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-8"
                         >
-                            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="w-16 h-16 bg-green-100 dark:bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-green-600 dark:text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Success!</h3>
-                            <p className="text-gray-400 mb-6">Time extension has been granted successfully.</p>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Success!</h3>
+                            <p className="text-gray-500 dark:text-gray-400 mb-6">Action completed successfully.</p>
                             <button
                                 onClick={() => setShowSuccessModal(false)}
-                                className="w-full px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
+                                className="w-full px-6 py-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white font-medium transition-colors"
                             >
                                 Close
                             </button>
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence >
 
             {/* Performance Analysis Modal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {showPerformanceModal && performanceData && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <motion.div
@@ -575,12 +586,44 @@ const Users = () => {
                             className="relative bg-[#0f172a] border border-white/10 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]"
                         >
                             {/* Header */}
-                            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-[#0f172a] to-[#1e293b]">
+                            <div className="p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center bg-gradient-to-r from-[#0f172a] to-[#1e293b] gap-4">
                                 <div>
                                     <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Team Performance</h2>
                                     <p className="text-gray-400 text-sm mt-1">Real-time collaboration insights</p>
                                 </div>
-                                <button onClick={() => setShowPerformanceModal(false)} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+
+                                {/* Date Filter Controls */}
+                                <div className="flex flex-col sm:flex-row items-center gap-2">
+                                    <div className="relative">
+                                        <label className="block text-xs text-gray-500 mb-1 ml-1">From</label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="bg-white/5 border border-white/10 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 [color-scheme:dark]"
+                                        />
+                                    </div>
+                                    <div className="relative">
+                                        <label className="block text-xs text-gray-500 mb-1 ml-1">To</label>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="bg-white/5 border border-white/10 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 [color-scheme:dark]"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleOpenPerformance}
+                                        className="mt-5 p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-lg shadow-blue-500/20"
+                                        title="Refresh Data"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <button onClick={() => setShowPerformanceModal(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
                                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </div>
@@ -596,34 +639,42 @@ const Users = () => {
                                         </div>
                                         <h3 className="text-lg font-bold text-white mb-6 relative z-10">Performance Distribution</h3>
                                         <div className="h-64 w-full relative z-10">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie
-                                                        data={performanceData.distribution}
-                                                        cx="50%"
-                                                        cy="50%"
-                                                        innerRadius={60}
-                                                        outerRadius={80}
-                                                        paddingAngle={5}
-                                                        dataKey="value"
-                                                    >
-                                                        {performanceData.distribution.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                                        ))}
-                                                    </Pie>
-                                                    <Tooltip
-                                                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                                                        itemStyle={{ color: '#fff' }}
-                                                    />
-                                                    <Legend verticalAlign="bottom" height={36} />
-                                                </PieChart>
-                                            </ResponsiveContainer>
+                                            {performanceData.distribution.reduce((acc, curr) => acc + curr.value, 0) > 0 ? (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={performanceData.distribution}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={60}
+                                                            outerRadius={80}
+                                                            paddingAngle={5}
+                                                            dataKey="value"
+                                                        >
+                                                            {performanceData.distribution.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip
+                                                            contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                                            itemStyle={{ color: '#fff' }}
+                                                        />
+                                                        <Legend verticalAlign="bottom" height={36} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            ) : (
+                                                <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+                                                    No performance data for this period
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="mt-4 text-center">
-                                            <p className="text-sm text-gray-400">
-                                                <span className="text-green-400 font-bold">{performanceData.distribution[0].value}</span> High Performers leading the charge.
-                                            </p>
-                                        </div>
+                                        {performanceData.distribution.reduce((acc, curr) => acc + curr.value, 0) > 0 && (
+                                            <div className="mt-4 text-center">
+                                                <p className="text-sm text-gray-400">
+                                                    <span className="text-green-400 font-bold">{performanceData.distribution[0].value}</span> High Performers leading the charge.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Leaderboard Section */}
@@ -631,7 +682,7 @@ const Users = () => {
                                         <h3 className="text-lg font-bold text-white mb-6 flex items-center">
                                             <span className="mr-2">🏆</span> Top Contributors
                                         </h3>
-                                        <div className="space-y-4">
+                                        <div className="space-y-4 max-h-64 overflow-y-auto custom-scrollbar pr-2">
                                             {performanceData.topUsers.map((u, idx) => (
                                                 <div key={u.id} className="flex items-center justify-between p-3 rounded-xl bg-[#0f172a] border border-white/5 hover:border-primary-500/30 transition-all group">
                                                     <div className="flex items-center">
@@ -640,39 +691,42 @@ const Users = () => {
                                                         </div>
                                                         <div>
                                                             <div className="text-sm font-bold text-white group-hover:text-primary-400 transition-colors">{u.username}</div>
-                                                            <div className="text-xs text-gray-500">{u.email}</div>
+                                                            <div className="text-xs text-gray-500">{u.completed_tasks} tasks completed</div>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-sm font-bold text-[#00f6ff]">{u.points || 0} pts</div>
-                                                        <div className="text-xs text-green-400">Excellent</div>
+                                                        <div className="text-sm font-bold text-[#00f6ff]">{u.points} pts</div>
+                                                        <div className={`text-xs ${u.points > 100 ? 'text-green-400' : 'text-gray-400'}`}>
+                                                            {u.points > 100 ? 'Excellent' : 'Good'}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
                                             {performanceData.topUsers.length === 0 && (
-                                                <p className="text-gray-500 text-center text-sm py-4">No data available yet.</p>
+                                                <div className="text-center py-8">
+                                                    <p className="text-gray-500 text-sm">No active contributors found in range.</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
 
                                 </div>
-                                <div className="mt-8 bg-gradient-to-r from-primary-900/40 to-blue-900/40 rounded-2xl p-6 border border-primary-500/20 flex items-center justify-between">
+                                <div className="mt-8 bg-gradient-to-r from-primary-900/40 to-blue-900/40 rounded-2xl p-6 border border-primary-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
                                     <div>
                                         <h4 className="text-white font-bold text-lg">AI Suggestion 💡</h4>
                                         <p className="text-gray-300 text-sm mt-1 max-w-xl">
-                                            "Team velocity is stable. Consider incentivizing the 'Average' group with a new challenge to boost overall productivity."
+                                            {performanceData.topUsers.length > 5
+                                                ? "\"Team velocity is stable. Consider incentivizing the 'Average' group with a new challenge to boost overall productivity.\""
+                                                : "\"Activity is low for this period. Check if tasks are being marked as completed or if the date range covers the active sprint.\""}
                                         </p>
                                     </div>
-                                    <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors">
-                                        Generate Report
-                                    </button>
                                 </div>
                             </div>
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
-        </div>
+            </AnimatePresence >
+        </div >
     );
 };
 

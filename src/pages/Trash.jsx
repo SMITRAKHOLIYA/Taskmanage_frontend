@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import api from '../api';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const Trash = () => {
-    const [tasks, setTasks] = useState([]);
+    const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
+    const [trashTasks, setTrashTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState(null);
@@ -16,9 +20,10 @@ const Trash = () => {
     const fetchTrash = async () => {
         try {
             const response = await api.get('/tasks/trash');
-            setTasks(response.data);
+            setTrashTasks(response.data);
         } catch (error) {
             console.error("Error fetching trash", error);
+            notify.error("Failed to fetch trash tasks.");
         } finally {
             setLoading(false);
         }
@@ -26,11 +31,12 @@ const Trash = () => {
 
     const handleRestore = async (id) => {
         try {
-            await api.put(`/tasks/${id}/restore`);
+            await api.post(`/tasks/${id}/restore`);
             fetchTrash();
+            notify.success("Task restored!");
         } catch (error) {
             console.error("Error restoring task", error);
-            alert("Failed to restore task");
+            notify.error("Failed to restore task");
         }
     };
 

@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import CommandPalette from './CommandPalette';
+import FloatingActionButton from './FloatingActionButton';
 
 const MainLayout = ({ children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
         <div className="flex bg-gray-50 dark:bg-gray-900 min-h-screen">
+            <CommandPalette />
             <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
             <div className="flex-1 flex flex-col md:ml-64 transition-all duration-300 overflow-x-hidden">
@@ -24,6 +27,8 @@ const MainLayout = ({ children }) => {
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
+
+            <FloatingActionButton />
         </div>
     );
 };

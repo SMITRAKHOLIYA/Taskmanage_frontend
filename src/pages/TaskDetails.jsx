@@ -2,16 +2,22 @@ import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api, { MEDIA_URL } from '../api';
 import { AuthContext } from '../context/AuthContext';
+import TaskExecutionStepper from '../components/TaskExecutionStepper';
+import { useNotification } from '../context/NotificationContext';
+
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const TaskDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, refreshUser } = useContext(AuthContext);
+    const { notify } = useNotification();
     const [task, setTask] = useState(null);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     const [attachments, setAttachments] = useState([]);
     const [answers, setAnswers] = useState({}); // Store answers by question ID
@@ -85,9 +91,10 @@ const TaskDetails = () => {
             } else {
                 setNewComment('');
             }
+            notify.success("Comment added!");
         } catch (error) {
             console.error("Error adding comment", error);
-            alert("Failed to add comment");
+            notify.error("Failed to add comment");
         }
     };
 
@@ -105,20 +112,77 @@ const TaskDetails = () => {
             // Refresh attachments
             const attachmentsRes = await api.get(`/tasks/${id}/attachments`);
             setAttachments(attachmentsRes.data);
+            notify.success("File uploaded!");
         } catch (error) {
             console.error("Error uploading file", error);
-            alert("Failed to upload file");
+            notify.error("Failed to upload file");
+        }
+    };
+
+    const handleDelete = async () => {
+        try {
+            await api.delete(`/tasks/${id}`);
+            notify.success('Task deleted successfully');
+            navigate('/tasks');
+        } catch (error) {
+            console.error("Error deleting task", error);
+            notify.error('Failed to delete task');
         }
     };
 
     const handleStatusChange = async (e) => {
         const newStatus = e.target.value;
+        let note = null;
+
+        const isManager = user && ['admin', 'manager', 'owner'].includes(user.user.role);
+        const isAssignee = user && String(user.user.id) === String(task.assigned_to);
+
+        // If Manager is changing status and is NOT assignee, require reason
+        if (isManager && !isAssignee) {
+            note = window.prompt("MANAGEMENT OVERRIDE: Please provide a reason for changing this status manually.");
+            if (note === null) return; // Cancelled
+            if (note.trim() === "") {
+                notify.error("A reason is required for management overrides.");
+                return;
+            }
+        }
+
         try {
-            await api.put(`/tasks/${id}`, { status: newStatus });
+            await api.put(`/tasks/${id}`, { status: newStatus, note: note });
             setTask({ ...task, status: newStatus });
+            notify.success("Status updated!");
         } catch (error) {
             console.error("Error updating status", error);
-            alert("Failed to update status");
+            notify.error(error.response?.data?.message || "Failed to update status");
+        }
+    };
+
+    const handleReviewAction = async (action) => {
+        let newStatus = '';
+        let note = null;
+
+        if (action === 'approve') {
+            if (!window.confirm("Are you sure you want to approve this task? It will be marked as Completed.")) return;
+            newStatus = 'completed';
+            note = "Task approved by reviewer.";
+        } else if (action === 'reject') {
+            const reason = window.prompt("Please provide a reason for rejecting this task (to be sent to the assignee):");
+            if (reason === null) return;
+            if (reason.trim() === "") {
+                notify.error("A rejection reason is required.");
+                return;
+            }
+            newStatus = 'in_progress';
+            note = `Task rejected by reviewer. Reason: ${reason}`;
+        }
+
+        try {
+            await api.put(`/tasks/${id}`, { status: newStatus, note: note });
+            setTask({ ...task, status: newStatus });
+            notify.success(`Task ${action}d successfully`); // approved/rejected
+        } catch (error) {
+            console.error("Error updating status", error);
+            notify.error("Failed to update task status");
         }
     };
 
@@ -165,9 +229,10 @@ const TaskDetails = () => {
                 delete newDrafts[questionId];
                 return newDrafts;
             });
+            notify.success("Answer saved!");
         } catch (error) {
             console.error("Error saving answer", error);
-            alert("Failed to save answer. Please try again.");
+            notify.error("Failed to save answer. Please try again.");
             // Revert optimistic update if needed, but for now we just alert
         }
     };
@@ -381,8 +446,14 @@ const TaskDetails = () => {
     if (!task) return <div className="p-8 text-center text-gray-500">Loading...</div>;
 
     return (
-
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+            <ConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                title="Delete Task"
+                message="Are you sure you want to delete this task? This action cannot be undone."
+            />
             <button
                 onClick={() => navigate('/tasks')}
                 className="mb-4 text-primary-600 hover:text-primary-500 font-medium flex items-center"
@@ -404,6 +475,32 @@ const TaskDetails = () => {
                 </div>
 
                 <div className="flex items-center gap-3 bg-[#1a1f2e] p-2 rounded-xl border border-white/10">
+                    {/* Review Actions */}
+                    {task.status === 'waiting_for_review' && user && ['admin', 'manager', 'owner'].includes(user.user.role) && (
+                        <div className="flex gap-2 mr-2 border-r border-white/10 pr-2">
+                            <button
+                                onClick={() => handleReviewAction('approve')}
+                                className="px-3 py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 hover:text-green-300 font-medium transition-colors flex items-center border border-green-500/20"
+                                title="Approve and mark as Completed"
+                            >
+                                <svg className="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Approve
+                            </button>
+                            <button
+                                onClick={() => handleReviewAction('reject')}
+                                className="px-3 py-2 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:text-yellow-300 font-medium transition-colors flex items-center border border-yellow-500/20"
+                                title="Reject and return to In Progress"
+                            >
+                                <svg className="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reject
+                            </button>
+                        </div>
+                    )}
+
                     {user && (user.user.role === 'admin' || user.user.role === 'manager' || user.user.role === 'owner') && (
                         <>
                             <Link
@@ -429,6 +526,19 @@ const TaskDetails = () => {
                     )}
                 </div>
             </div>
+
+            {/* Execution Workflow Stepper */}
+            {/* Execution Workflow Stepper */}
+            {task.requires_execution_workflow == 1 && (
+                <TaskExecutionStepper
+                    task={task}
+                    onUpdate={async () => {
+                        const res = await api.get(`/tasks/${id}`);
+                        setTask(res.data);
+                    }}
+                />
+            )}
+
             <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg mb-8 transition-colors duration-200">
                 <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
                     <div>
@@ -452,7 +562,8 @@ const TaskDetails = () => {
                             <select
                                 id="status"
                                 name="status"
-                                className={`block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md dark:bg-gray-700 dark:text-white
+                                disabled={task.requires_execution_workflow == 1 && (currentUser?.role !== 'admin' && currentUser?.role !== 'manager' && currentUser?.role !== 'owner')}
+                                className={`block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed
                                     ${task.status === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' :
                                         'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'}`}
                                 value={task.status}
@@ -513,137 +624,139 @@ const TaskDetails = () => {
             </div>
 
             {/* Structured Questions Section */}
-            {task.questions && JSON.parse(task.questions).length > 0 && (
-                <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg mb-8 transition-colors duration-200">
-                    <div className="px-4 py-5 sm:p-6">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">Structured Questions</h3>
-                        <div className="space-y-8">
-                            {JSON.parse(task.questions).map((q, index) => (
-                                <div key={q.id} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0 last:pb-0">
-                                    <div className="flex flex-col gap-2 mb-2">
-                                        <div className="flex items-start justify-between">
-                                            <label className="text-md font-semibold text-gray-900 dark:text-white">
-                                                {index + 1}. {q.text} {q.required && <span className="text-red-500">*</span>}
-                                            </label>
-                                            {/* Status indicator if answered */}
-                                            {answers[q.id] && (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                    Answered
-                                                </span>
-                                            )}
-                                        </div>
+            {
+                task.questions && JSON.parse(task.questions).length > 0 && (
+                    <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg mb-8 transition-colors duration-200">
+                        <div className="px-4 py-5 sm:p-6">
+                            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">Structured Questions</h3>
+                            <div className="space-y-8">
+                                {JSON.parse(task.questions).map((q, index) => (
+                                    <div key={q.id} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0 last:pb-0">
+                                        <div className="flex flex-col gap-2 mb-2">
+                                            <div className="flex items-start justify-between">
+                                                <label className="text-md font-semibold text-gray-900 dark:text-white">
+                                                    {index + 1}. {q.text} {q.required && <span className="text-red-500">*</span>}
+                                                </label>
+                                                {/* Status indicator if answered */}
+                                                {answers[q.id] && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                        Answered
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                        <div className="mt-1">
-                                            {/* Only the assigned user can answer. Everyone else (Admin, Manager, Unassigned, etc.) sees read-only. */}
-                                            {String(currentUser?.id) !== String(task.assigned_to) ? (
-                                                <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-md text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
-                                                    {answers[q.id] ? (
-                                                        q.type === 'boolean' ? (
-                                                            <span className="capitalize">{answers[q.id]}</span>
-                                                        ) : q.type === 'checkbox' ? (
-                                                            <span>
-                                                                {Array.isArray(answers[q.id])
-                                                                    ? answers[q.id].join(', ')
-                                                                    : (typeof answers[q.id] === 'string' && answers[q.id].startsWith('[')
-                                                                        ? JSON.parse(answers[q.id]).join(', ')
-                                                                        : answers[q.id])}
-                                                            </span>
+                                            <div className="mt-1">
+                                                {/* Only the assigned user can answer. Everyone else (Admin, Manager, Unassigned, etc.) sees read-only. */}
+                                                {String(currentUser?.id) !== String(task.assigned_to) ? (
+                                                    <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-md text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600">
+                                                        {answers[q.id] ? (
+                                                            q.type === 'boolean' ? (
+                                                                <span className="capitalize">{answers[q.id]}</span>
+                                                            ) : q.type === 'checkbox' ? (
+                                                                <span>
+                                                                    {Array.isArray(answers[q.id])
+                                                                        ? answers[q.id].join(', ')
+                                                                        : (typeof answers[q.id] === 'string' && answers[q.id].startsWith('[')
+                                                                            ? JSON.parse(answers[q.id]).join(', ')
+                                                                            : answers[q.id])}
+                                                                </span>
+                                                            ) : (
+                                                                <span>{answers[q.id]}</span>
+                                                            )
                                                         ) : (
-                                                            <span>{answers[q.id]}</span>
-                                                        )
-                                                    ) : (
-                                                        <span className="text-gray-500 italic">No answer provided</span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                renderQuestionInput(q, answers, handleAnswerChange)
-                                            )}
+                                                            <span className="text-gray-500 italic">No answer provided</span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    renderQuestionInput(q, answers, handleAnswerChange)
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Comments for main question */}
-                                    <div className="ml-4 mb-4 border-l-2 border-gray-100 dark:border-gray-700 pl-4">
-                                        <div className="space-y-2 mb-2">
-                                            {comments.filter(c => c.context_id === `q-${q.id}`).map(c => (
-                                                <div key={c.id} className="bg-gray-50 dark:bg-gray-700 p-2 rounded text-sm">
-                                                    <span className="font-bold text-gray-900 dark:text-white mr-2">{c.username}:</span>
-                                                    <span className="text-gray-700 dark:text-gray-300">{c.content}</span>
-                                                </div>
-                                            ))}
+                                        {/* Comments for main question */}
+                                        <div className="ml-4 mb-4 border-l-2 border-gray-100 dark:border-gray-700 pl-4">
+                                            <div className="space-y-2 mb-2">
+                                                {comments.filter(c => c.context_id === `q-${q.id}`).map(c => (
+                                                    <div key={c.id} className="bg-gray-50 dark:bg-gray-700 p-2 rounded text-sm">
+                                                        <span className="font-bold text-gray-900 dark:text-white mr-2">{c.username}:</span>
+                                                        <span className="text-gray-700 dark:text-gray-300">{c.content}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                                    placeholder="Add a comment..."
+                                                    value={newComment[`q-${q.id}`] || ''}
+                                                    onChange={(e) => setNewComment({ ...newComment, [`q-${q.id}`]: e.target.value })}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleAddComment(null, `q-${q.id}`);
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={() => handleAddComment(null, `q-${q.id}`)}
+                                                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                                >
+                                                    Reply
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                                placeholder="Add a comment..."
-                                                value={newComment[`q-${q.id}`] || ''}
-                                                onChange={(e) => setNewComment({ ...newComment, [`q-${q.id}`]: e.target.value })}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleAddComment(null, `q-${q.id}`);
-                                                    }
-                                                }}
-                                            />
-                                            <button
-                                                onClick={() => handleAddComment(null, `q-${q.id}`)}
-                                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                                            >
-                                                Reply
-                                            </button>
-                                        </div>
-                                    </div>
 
-                                    {/* Sub-questions */}
-                                    {q.subQuestions && q.subQuestions.length > 0 && (
-                                        <div className="ml-8 space-y-6 mt-4">
-                                            {q.subQuestions.map((sub, subIndex) => (
-                                                <div key={sub.id}>
-                                                    <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-                                                        {index + 1}.{subIndex + 1}. {sub.text}
-                                                    </h5>
-                                                    {/* Comments for sub-question */}
-                                                    <div className="ml-4 border-l-2 border-gray-100 dark:border-gray-700 pl-4">
-                                                        <div className="space-y-2 mb-2">
-                                                            {comments.filter(c => c.context_id === `q-${q.id}-sub-${sub.id}`).map(c => (
-                                                                <div key={c.id} className="bg-gray-50 dark:bg-gray-700 p-2 rounded text-xs">
-                                                                    <span className="font-bold text-gray-900 dark:text-white mr-2">{c.username}:</span>
-                                                                    <span className="text-gray-700 dark:text-gray-300">{c.content}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <input
-                                                                type="text"
-                                                                className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full text-xs border-gray-300 dark:border-gray-600 rounded-md p-1.5 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                                                placeholder="Add a comment..."
-                                                                value={newComment[`q-${q.id}-sub-${sub.id}`] || ''}
-                                                                onChange={(e) => setNewComment({ ...newComment, [`q-${q.id}-sub-${sub.id}`]: e.target.value })}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') {
-                                                                        e.preventDefault();
-                                                                        handleAddComment(null, `q-${q.id}-sub-${sub.id}`);
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <button
-                                                                onClick={() => handleAddComment(null, `q-${q.id}-sub-${sub.id}`)}
-                                                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                                                            >
-                                                                Reply
-                                                            </button>
+                                        {/* Sub-questions */}
+                                        {q.subQuestions && q.subQuestions.length > 0 && (
+                                            <div className="ml-8 space-y-6 mt-4">
+                                                {q.subQuestions.map((sub, subIndex) => (
+                                                    <div key={sub.id}>
+                                                        <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
+                                                            {index + 1}.{subIndex + 1}. {sub.text}
+                                                        </h5>
+                                                        {/* Comments for sub-question */}
+                                                        <div className="ml-4 border-l-2 border-gray-100 dark:border-gray-700 pl-4">
+                                                            <div className="space-y-2 mb-2">
+                                                                {comments.filter(c => c.context_id === `q-${q.id}-sub-${sub.id}`).map(c => (
+                                                                    <div key={c.id} className="bg-gray-50 dark:bg-gray-700 p-2 rounded text-xs">
+                                                                        <span className="font-bold text-gray-900 dark:text-white mr-2">{c.username}:</span>
+                                                                        <span className="text-gray-700 dark:text-gray-300">{c.content}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full text-xs border-gray-300 dark:border-gray-600 rounded-md p-1.5 border bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                                                    placeholder="Add a comment..."
+                                                                    value={newComment[`q-${q.id}-sub-${sub.id}`] || ''}
+                                                                    onChange={(e) => setNewComment({ ...newComment, [`q-${q.id}-sub-${sub.id}`]: e.target.value })}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault();
+                                                                            handleAddComment(null, `q-${q.id}-sub-${sub.id}`);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <button
+                                                                    onClick={() => handleAddComment(null, `q-${q.id}-sub-${sub.id}`)}
+                                                                    className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                                                >
+                                                                    Reply
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Comments Section */}
@@ -742,42 +855,44 @@ const TaskDetails = () => {
 
 
             {/* Success Modal */}
-            {showSuccessModal && (
-                <div className="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowSuccessModal(false)}></div>
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full">
-                            <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
-                                        <svg className="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </div>
-                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                                            Success
-                                        </h3>
-                                        <div className="mt-2">
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                Deadline extended successfully!
-                                            </p>
+            {
+                showSuccessModal && (
+                    <div className="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setShowSuccessModal(false)}></div>
+                            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full">
+                                <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                    <div className="sm:flex sm:items-start">
+                                        <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+                                            <svg className="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                        <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                                                Success
+                                            </h3>
+                                            <div className="mt-2">
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    Deadline extended successfully!
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                                <button type="button" onClick={() => setShowSuccessModal(false)} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
-                                    OK
-                                </button>
+                                <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                    <button type="button" onClick={() => setShowSuccessModal(false)} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                        OK
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
             {/* Debug Section */}
-        </div>
+        </div >
     );
 };
 

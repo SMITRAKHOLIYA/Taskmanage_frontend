@@ -1,13 +1,16 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import TaskDetailsModal from '../components/TaskDetailsModal';
+import { useNotification } from '../context/NotificationContext';
+import { useSync } from '../context/SyncContext';
 
 const KanbanBoard = () => {
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
+    const { taskUpdateTrigger } = useSync();
     const [draggedTaskId, setDraggedTaskId] = useState(null);
     const [columnsData, setColumnsData] = useState({
         pending: { tasks: [], page: 1, total: 0, totalPages: 1, loading: false },
@@ -17,13 +20,30 @@ const KanbanBoard = () => {
     const [selectedTaskId, setSelectedTaskId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // Filter State
+    const [projects, setProjects] = useState([]);
+    const [filterProject, setFilterProject] = useState('');
+
     const LIMIT = 5; // Keep lists short as requested
+
+    useEffect(() => {
+        fetchProjects();
+    }, []);
 
     useEffect(() => {
         fetchColumnTasks('pending', 1);
         fetchColumnTasks('in_progress', 1);
         fetchColumnTasks('completed', 1);
-    }, []);
+    }, [filterProject, taskUpdateTrigger]);
+
+    const fetchProjects = async () => {
+        try {
+            const response = await api.get('/projects');
+            setProjects(response.data);
+        } catch (error) {
+            console.error("Error fetching projects", error);
+        }
+    };
 
     const fetchColumnTasks = async (status, page) => {
         setColumnsData(prev => ({
@@ -32,7 +52,8 @@ const KanbanBoard = () => {
         }));
 
         try {
-            const response = await api.get(`/tasks?status=${status}&page=${page}&limit=${LIMIT}`);
+            const projectQuery = filterProject ? `&project_id=${filterProject}` : '';
+            const response = await api.get(`/tasks?status=${status}&page=${page}&limit=${LIMIT}${projectQuery}`);
             setColumnsData(prev => ({
                 ...prev,
                 [status]: {
@@ -109,7 +130,7 @@ const KanbanBoard = () => {
 
         } catch (error) {
             console.error("Failed to update task status", error);
-            alert("Failed to move task. Please try again.");
+            notify.error("Failed to move task. Please try again.");
         }
     };
 
@@ -133,9 +154,21 @@ const KanbanBoard = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-4rem)]">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Task Board</h2>
-                <Link to="/create-task" className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Task Board</h2>
+                    <select
+                        value={filterProject}
+                        onChange={(e) => setFilterProject(e.target.value)}
+                        className="block pl-3 pr-10 py-1.5 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md transition-colors"
+                    >
+                        <option value="">All Projects</option>
+                        {Array.isArray(projects) && projects.map(p => (
+                            <option key={p.id} value={p.id}>{p.title}</option>
+                        ))}
+                    </select>
+                </div>
+                <Link to="/create-task" className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
                     + New Task
                 </Link>
             </div>

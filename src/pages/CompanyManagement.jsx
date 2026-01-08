@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api';
+import { useNotification } from '../context/NotificationContext';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const CompanyManagement = () => {
     const [companies, setCompanies] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const { notify } = useNotification();
     const [currentCompany, setCurrentCompany] = useState(null); // For edit
     const [formData, setFormData] = useState({ name: '', industry: '', status: 'active' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Confirmation Modal State
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [companyToDelete, setCompanyToDelete] = useState(null);
 
     useEffect(() => {
         fetchCompanies();
@@ -46,31 +53,52 @@ const CompanyManagement = () => {
         try {
             if (currentCompany) {
                 await api.put(`/companies/${currentCompany.id}`, formData);
+                notify.success('Company updated successfully');
             } else {
                 await api.post('/companies', formData);
+                notify.success('Company created successfully');
             }
             fetchCompanies();
             handleCloseModal();
         } catch (err) {
             setError(err.response?.data?.message || 'Operation failed');
+            notify.error(err.response?.data?.message || 'Operation failed');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this company?')) return;
+    const confirmDelete = (id) => {
+        setCompanyToDelete(id);
+        setShowDeleteModal(true);
+    };
+
+    const handleDelete = async () => {
+        if (!companyToDelete) return;
         try {
-            await api.delete(`/companies/${id}`);
+            await api.delete(`/companies/${companyToDelete}`);
             fetchCompanies();
-        } catch (err) {
-            console.error(err);
-            alert('Failed to delete company');
+            notify.success('Company deleted successfully');
+            setShowDeleteModal(false);
+            setCompanyToDelete(null);
+        } catch (error) {
+            console.error("Error deleting company", error);
+            notify.error('Failed to delete company');
         }
     };
 
     return (
         <div className="space-y-6">
+            <ConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                title="Delete Company"
+                message="Are you sure you want to delete this company? This action cannot be undone."
+                confirmText="Delete"
+                isDangerous={true}
+            />
+
             <header className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Company Management</h1>
@@ -117,7 +145,7 @@ const CompanyManagement = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button onClick={() => handleOpenModal(company)} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-4">Edit</button>
-                                        <button onClick={() => handleDelete(company.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Delete</button>
+                                        <button onClick={() => confirmDelete(company.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Delete</button>
                                     </td>
                                 </tr>
                             ))}

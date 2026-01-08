@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import api, { MEDIA_URL } from '../api';
 import { AuthContext } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNotification } from '../context/NotificationContext';
 
 const TaskDetailsModal = ({ taskId, onClose, onUpdate }) => {
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
     const [task, setTask] = useState(null);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
@@ -72,15 +74,20 @@ const TaskDetailsModal = ({ taskId, onClose, onUpdate }) => {
 
         try {
             await api.post(`/tasks/${taskId}/comments`, { content: content, context_id: contextId });
-            const commentsRes = await api.get(`/tasks/${taskId}/comments`);
-            setComments(Array.isArray(commentsRes.data) ? commentsRes.data : []);
-            if (contextId) {
-                setNewComment({ ...newComment, [contextId]: '' });
-            } else {
+            // If it's a general comment, close the modal as requested
+            if (!contextId) {
                 setNewComment('');
+                if (onClose) onClose();
+            } else {
+                // For specific question comments, we might want to keep it open to see the context
+                const commentsRes = await api.get(`/tasks/${taskId}/comments`);
+                setComments(Array.isArray(commentsRes.data) ? commentsRes.data : []);
+                setNewComment({ ...newComment, [contextId]: '' });
             }
+            notify.success("Comment added");
         } catch (error) {
-            alert("Failed to add comment");
+            console.error("Error adding comment", error);
+            notify.error("Failed to add comment");
         }
     };
 
@@ -90,8 +97,10 @@ const TaskDetailsModal = ({ taskId, onClose, onUpdate }) => {
             await api.put(`/tasks/${taskId}`, { status: newStatus });
             setTask({ ...task, status: newStatus });
             if (onUpdate) onUpdate(); // Refresh kanban
+            notify.success("Status updated");
         } catch (error) {
-            alert("Failed to update status");
+            console.error("Error updating status", error);
+            notify.error(error.response?.data?.message || "Failed to update status");
         }
     };
 
@@ -128,8 +137,10 @@ const TaskDetailsModal = ({ taskId, onClose, onUpdate }) => {
                 delete newDrafts[questionId];
                 return newDrafts;
             });
+            notify.success("Answer saved");
         } catch (error) {
-            alert("Failed to save answer.");
+            console.error("Error saving answer", error);
+            notify.error("Failed to save answer.");
         }
     };
 
@@ -210,6 +221,24 @@ const TaskDetailsModal = ({ taskId, onClose, onUpdate }) => {
                         <div className="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-start bg-gray-50 dark:bg-[#1a1f2e]">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{task.title}</h2>
+                                <div className="flex flex-col gap-1 mb-2">
+                                    {task.project_title && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                            <span className="font-semibold w-24">Project:</span>
+                                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800">
+                                                {task.project_title}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {task.parent_task_title && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                            <span className="font-semibold w-24">Parent Task:</span>
+                                            <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded dark:bg-purple-200 dark:text-purple-800">
+                                                {task.parent_task_title}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="flex items-center gap-3">
                                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${task.priority === 'high' ? 'bg-red-100 text-red-800' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                                         {task.priority}

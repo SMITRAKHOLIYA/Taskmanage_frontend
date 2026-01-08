@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import Calendar from '../components/Calendar';
 import Modal from '../components/Modal';
 import TaskInsights from '../components/TaskInsights';
+import TaskDetailsModal from '../components/TaskDetailsModal';
+import { AnimatePresence } from 'framer-motion';
 
 const Dashboard = ({ showTitle = true }) => {
     const [recentTasks, setRecentTasks] = useState([]);
@@ -13,6 +15,30 @@ const Dashboard = ({ showTitle = true }) => {
     const [selectedDateTasks, setSelectedDateTasks] = useState([]);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const { user } = useContext(AuthContext);
+
+    // Task Modal State
+    const [selectedTaskId, setSelectedTaskId] = useState(null);
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+    const handleTaskClick = (task) => {
+        setSelectedTaskId(task.id);
+        setIsTaskModalOpen(true);
+    };
+
+    const handleCloseTaskModal = () => {
+        setIsTaskModalOpen(false);
+        setSelectedTaskId(null);
+    };
+
+    const handleTaskUpdate = async () => {
+        // Refresh recent tasks
+        try {
+            const tasksResponse = await api.get('/tasks?limit=5&sort_by=created_at&sort_order=desc');
+            setRecentTasks(tasksResponse.data.data || []);
+        } catch (error) {
+            console.error("Error refreshing tasks", error);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -155,7 +181,10 @@ const Dashboard = ({ showTitle = true }) => {
                     <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                         {recentTasks.map(task => (
                             <li key={task.id}>
-                                <Link to={`/tasks/${task.id}`} className="block hover:bg-gray-50 dark:hover:bg-gray-700 no-underline transition-colors duration-150">
+                                <div
+                                    onClick={() => handleTaskClick(task)}
+                                    className="block hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 cursor-pointer"
+                                >
                                     <div className="px-4 py-4 sm:px-6">
                                         <div className="flex items-center justify-between">
                                             <p className="text-sm font-medium text-primary-600 truncate">
@@ -181,7 +210,7 @@ const Dashboard = ({ showTitle = true }) => {
                                             </div>
                                         </div>
                                     </div>
-                                </Link>
+                                </div>
                             </li>
                         ))}
                         {recentTasks.length === 0 && (
@@ -216,10 +245,12 @@ const Dashboard = ({ showTitle = true }) => {
                                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                                     {selectedDateTasks.map(task => (
                                         <li key={task.id}>
-                                            <Link
-                                                to={`/tasks/${task.id}`}
-                                                className="block hover:bg-gray-50 dark:hover:bg-gray-700 no-underline transition-colors duration-150"
-                                                onClick={() => setIsCalendarOpen(false)}
+                                            <div
+                                                className="block hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 cursor-pointer"
+                                                onClick={() => {
+                                                    setIsCalendarOpen(false);
+                                                    handleTaskClick(task);
+                                                }}
                                             >
                                                 <div className="px-4 py-4 sm:px-6">
                                                     <div className="flex items-center justify-between">
@@ -243,7 +274,7 @@ const Dashboard = ({ showTitle = true }) => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </Link>
+                                            </div>
                                         </li>
                                     ))}
                                     {selectedDateTasks.length === 0 && (
@@ -259,6 +290,15 @@ const Dashboard = ({ showTitle = true }) => {
                         </div>
                     </div>
                 </Modal>
+                <AnimatePresence>
+                    {isTaskModalOpen && selectedTaskId && (
+                        <TaskDetailsModal
+                            taskId={selectedTaskId}
+                            onClose={handleCloseTaskModal}
+                            onUpdate={handleTaskUpdate}
+                        />
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

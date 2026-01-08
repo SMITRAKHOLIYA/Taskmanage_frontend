@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useContext } from 'react';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNotification } from '../context/NotificationContext';
 
 const Projects = () => {
     const [projects, setProjects] = useState([]);
@@ -10,6 +11,8 @@ const Projects = () => {
     const [formData, setFormData] = useState({ title: '', description: '', members: [] });
     const [users, setUsers] = useState([]);
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchProjects();
@@ -43,8 +46,10 @@ const Projects = () => {
             setShowModal(false);
             setFormData({ title: '', description: '', members: [] });
             fetchProjects();
+            notify.success('Project created successfully');
         } catch (error) {
-            alert('Failed to create project');
+            console.error("Error creating project", error);
+            notify.error('Failed to create project');
         }
     };
 
@@ -80,11 +85,12 @@ const Projects = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-6 hover:border-primary-500/50 transition-colors group"
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                        className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-6 hover:border-primary-500/50 transition-colors group cursor-pointer"
                     >
                         <div className="flex justify-between items-start mb-4">
                             <h3 className="text-xl font-bold text-white group-hover:text-primary-400 transition-colors">
-                                <Link to={`/projects/${project.id}`}>{project.title}</Link>
+                                {project.title}
                             </h3>
                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${project.status === 'active' ? 'bg-green-500/20 text-green-300' :
                                 project.status === 'completed' ? 'bg-blue-500/20 text-blue-300' :
@@ -113,15 +119,18 @@ const Projects = () => {
                                 <span>Created by {project.creator_name}</span>
                                 <span>{new Date(project.created_at).toLocaleDateString()}</span>
                             </div>
-                            <Link
-                                to={`/create-task?project_id=${project.id}`}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/create-task?project_id=${project.id}`);
+                                }}
                                 className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-medium transition-colors flex items-center gap-1"
                             >
                                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 </svg>
                                 Add Task
-                            </Link>
+                            </button>
                         </div>
                     </motion.div>
                 ))}

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useContext } from 'react';
 import api from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 const EditTask = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
     const [users, setUsers] = useState([]);
     const [formData, setFormData] = useState({
         title: '',
@@ -21,7 +23,8 @@ const EditTask = () => {
         frequency: 'daily',
         start_date: '',
         recurrence_trigger: 'schedule',
-        questions: []
+        questions: [],
+        requires_execution_workflow: false // Default to false
     });
     const [projects, setProjects] = useState([]);
     const [errors, setErrors] = useState({});
@@ -86,11 +89,12 @@ const EditTask = () => {
                 frequency: task.frequency || 'daily',
                 start_date: task.start_date || '',
                 recurrence_trigger: task.recurrence_trigger || 'schedule',
-                questions: task.questions ? (typeof task.questions === 'string' ? JSON.parse(task.questions) : task.questions) : []
+                questions: task.questions ? (typeof task.questions === 'string' ? JSON.parse(task.questions) : task.questions) : [],
+                requires_execution_workflow: task.requires_execution_workflow == 1
             });
         } catch (error) {
             console.error("Error fetching task details", error);
-            alert("Failed to load task details");
+            notify.error("Failed to load task details");
             navigate('/tasks');
         } finally {
             setLoading(false);
@@ -181,10 +185,11 @@ const EditTask = () => {
 
         try {
             await api.put(`/tasks/${id}`, formData);
+            notify.success('Task updated successfully');
             navigate('/tasks');
         } catch (error) {
-            console.error("Error updating task:", error);
-            alert('Failed to update task');
+            console.error("Error updating task", error);
+            notify.error('Failed to update task');
         }
     };
 
@@ -237,6 +242,29 @@ const EditTask = () => {
                             />
                         </div>
                     </div>
+
+                    {(user?.user?.role === 'admin' || user?.user?.role === 'manager' || user?.user?.role === 'owner') && (
+                        <div className="relative flex items-start mt-4">
+                            <div className="flex items-center h-5">
+                                <input
+                                    id="requires_execution_workflow"
+                                    name="requires_execution_workflow"
+                                    type="checkbox"
+                                    className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
+                                    checked={formData.requires_execution_workflow}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="ml-3 text-sm">
+                                <label htmlFor="requires_execution_workflow" className="font-medium text-gray-700 dark:text-gray-300">
+                                    Require Execution Workflow
+                                </label>
+                                <p className="text-gray-500 dark:text-gray-400">
+                                    If enabled, this task must go through the formal execution stages (In Progress -&gt; Local Tested -&gt; Live Deployed -&gt; Completed). Disable for simple task tracking.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                         <div className="sm:col-span-3">

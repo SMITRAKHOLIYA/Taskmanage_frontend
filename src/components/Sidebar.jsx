@@ -4,11 +4,14 @@ import { AuthContext } from '../context/AuthContext';
 import logo from '../assets/logo.png';
 import ThemeToggle from './ThemeToggle';
 import FullscreenToggle from './FullscreenToggle';
+import { useNotification } from '../context/NotificationContext';
+import { useSync } from '../context/SyncContext';
 import NotificationPanel from './NotificationPanel';
 import api, { MEDIA_URL } from '../api';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
     const { user, logout, refreshUser } = useContext(AuthContext);
+    const { notificationUpdateTrigger } = useSync();
     const navigate = useNavigate();
     const [showNotifications, setShowNotifications] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -20,19 +23,21 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     };
 
     // Notification Logic
+    // Notification Logic
     useEffect(() => {
         if (user) {
             fetchUnreadCount();
             triggerReminders();
             refreshUser();
-            const interval = setInterval(() => {
-                fetchUnreadCount();
-                triggerReminders();
-                refreshUser();
-            }, 60000);
-            return () => clearInterval(interval);
         }
     }, [user?.user?.id]);
+
+    // Re-fetch when sync trigger updates
+    useEffect(() => {
+        if (user) {
+            fetchUnreadCount();
+        }
+    }, [notificationUpdateTrigger]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -55,7 +60,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     const fetchUnreadCount = async () => {
         try {
             const response = await api.get('/notifications');
-            setUnreadCount(response.data.filter(n => n.is_read == 0).length);
+            const notifications = Array.isArray(response.data) ? response.data : [];
+            setUnreadCount(notifications.filter(n => n.is_read == 0).length);
         } catch (error) {
             console.error("Error fetching notifications", error);
         }
@@ -108,7 +114,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
     return (
         <aside
-            className={`fixed top-0 left-0 z-40 h-screen transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 w-[85vw] md:w-64 md:translate-x-0 overflow-hidden`}
+            className={`fixed top-0 left-0 z-40 h-screen transition-transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 w-[85vw] md:w-64 md:translate-x-0`}
             aria-label="Sidebar"
         >
             <div className="h-full flex flex-col justify-between bg-white dark:bg-gray-900">

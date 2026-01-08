@@ -16,7 +16,7 @@ const NotificationPanel = ({ onClose, positionClass }) => {
     const fetchNotifications = async () => {
         try {
             const response = await api.get('/notifications');
-            setNotifications(response.data);
+            setNotifications(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error("Error fetching notifications", error);
         } finally {

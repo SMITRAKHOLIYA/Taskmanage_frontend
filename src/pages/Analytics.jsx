@@ -13,6 +13,19 @@ const Analytics = () => {
     // Filter/Select Logic (default to first user or current user if found)
     const [selectedUser, setSelectedUser] = useState(null);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const usersPerPage = 5;
+
+    // Calculate Paginated Data
+    const indexOfLastUser = currentPage * usersPerPage;
+    const indexOfFirstUser = indexOfLastUser - usersPerPage;
+    const currentUsers = reportData.slice(indexOfFirstUser, indexOfLastUser);
+    const totalPages = Math.ceil(reportData.length / usersPerPage);
+
+    const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+    const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+
     useEffect(() => {
         fetchReport();
     }, []);
@@ -261,7 +274,7 @@ const Analytics = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {reportData.map((row, i) => (
+                                {currentUsers.map((row, i) => (
                                     <tr
                                         key={row.id}
                                         onClick={() => setSelectedUser(row)}
@@ -286,8 +299,33 @@ const Analytics = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {reportData.length > usersPerPage && (
+                        <div className="p-4 border-t border-white/5 flex items-center justify-between">
+                            <span className="text-sm text-gray-400 font-mono">
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={prevPage}
+                                    disabled={currentPage === 1}
+                                    className="px-4 py-2 rounded-lg bg-[#ffffff]/5 hover:bg-[#ffffff]/10 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold tracking-wider transition-colors border border-white/10"
+                                >
+                                    PREV
+                                </button>
+                                <button
+                                    onClick={nextPage}
+                                    disabled={currentPage === totalPages}
+                                    className="px-4 py-2 rounded-lg bg-[#00f6ff]/10 hover:bg-[#00f6ff]/20 text-[#00f6ff] disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold tracking-wider transition-colors border border-[#00f6ff]/20"
+                                >
+                                    NEXT
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
-            </div>
+            </div >
 
             <style>{`
                 .animate-pulse-slow { animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
@@ -296,7 +334,7 @@ const Analytics = () => {
                 .glow-text { text-shadow: 0 0 10px rgba(0, 246, 255, 0.5); }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             `}</style>
-        </div>
+        </div >
     );
 };
 

@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import TaskDetailsModal from '../components/TaskDetailsModal';
 import api from '../api';
 import { AuthContext } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
+import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 
 const ProjectDetails = () => {
     const { id } = useParams();
@@ -11,8 +13,19 @@ const ProjectDetails = () => {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showTaskModal, setShowTaskModal] = useState(false);
-    const [taskFormData, setTaskFormData] = useState({ title: '', description: '', priority: 'medium', due_date: '', assigned_to: '', parent_id: '' });
+    const [selectedTaskId, setSelectedTaskId] = useState(null);
+    const [isTaskDetailsOpen, setIsTaskDetailsOpen] = useState(false);
+    const [taskFormData, setTaskFormData] = useState({
+        title: '',
+        description: '',
+        priority: 'medium',
+        due_date: '',
+        assigned_to: '',
+        parent_id: '',
+        requires_execution_workflow: false // Default to false
+    });
     const { user } = useContext(AuthContext);
+    const { notify } = useNotification();
 
     // Dashboard Data States
     const [statusData, setStatusData] = useState([]);
@@ -97,7 +110,15 @@ const ProjectDetails = () => {
 
             await api.post('/tasks', payload);
             setShowTaskModal(false);
-            setTaskFormData({ title: '', description: '', priority: 'medium', due_date: '', assigned_to: '', parent_id: '' });
+            setTaskFormData({
+                title: '',
+                description: '',
+                priority: 'medium',
+                due_date: '',
+                assigned_to: '',
+                parent_id: '',
+                requires_execution_workflow: false
+            });
             fetchProjectTasks();
             fetchProjectDetails();
         } catch (error) {
@@ -127,6 +148,11 @@ const ProjectDetails = () => {
 
     const taskTree = buildTaskTree(tasks);
 
+    const openTaskDetails = (taskId) => {
+        setSelectedTaskId(taskId);
+        setIsTaskDetailsOpen(true);
+    };
+
     const TaskItem = ({ task, depth = 0 }) => (
         <div className={`mb-2 ${depth > 0 ? 'ml-6 border-l-2 border-white/5 pl-4' : ''}`}>
             <motion.div
@@ -136,10 +162,10 @@ const ProjectDetails = () => {
             >
                 <div>
                     <h4 className="text-white font-medium flex items-center gap-2">
-                        <Link to={`/tasks/${task.id}`} className="hover:text-primary-400 transition-colors">{task.title}</Link>
+                        <span onClick={() => openTaskDetails(task.id)} className="hover:text-primary-400 transition-colors cursor-pointer">{task.title}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded border ${task.priority === 'high' ? 'border-red-500/50 text-red-400 bg-red-500/10' :
-                            task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10' :
-                                'border-green-500/50 text-green-400 bg-green-500/10'
+                                task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10' :
+                                    'border-green-500/50 text-green-400 bg-green-500/10'
                             } font-mono uppercase`}>{task.priority}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded border border-white/10 text-gray-400 bg-white/5 font-mono uppercase`}>{task.status}</span>
                     </h4>
@@ -342,6 +368,22 @@ const ProjectDetails = () => {
                                         <input type="text" required className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors font-mono"
                                             value={taskFormData.title} onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })} />
                                     </div>
+
+                                    {(user?.user?.role === 'admin' || user?.user?.role === 'manager' || user?.user?.role === 'owner') && (
+                                        <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+                                            <input
+                                                id="proj_req_workflow"
+                                                type="checkbox"
+                                                className="w-4 h-4 text-primary-600 bg-black/20 border-white/10 rounded focus:ring-primary-500 focus:ring-1"
+                                                checked={taskFormData.requires_execution_workflow}
+                                                onChange={(e) => setTaskFormData({ ...taskFormData, requires_execution_workflow: e.target.checked })}
+                                            />
+                                            <div>
+                                                <label htmlFor="proj_req_workflow" className="block text-xs font-bold text-gray-300 uppercase tracking-wider">Require Execution Workflow</label>
+                                                <p className="text-[10px] text-gray-500 font-mono">Enforce standard protocol (In Progress -&gt; Local -&gt; Live -&gt; Done)</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Priority Level</label>
@@ -380,6 +422,13 @@ const ProjectDetails = () => {
                             </form>
                         </motion.div>
                     </div>
+                )}
+                {isTaskDetailsOpen && selectedTaskId && (
+                    <TaskDetailsModal
+                        taskId={selectedTaskId}
+                        onClose={() => setIsTaskDetailsOpen(false)}
+                        onUpdate={() => { fetchProjectTasks(); fetchProjectDetails(); }}
+                    />
                 )}
             </AnimatePresence>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext'; // Added useNotification import
 import { motion } from 'framer-motion';
 
 import logo from '../assets/logo.png';
@@ -10,9 +11,10 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
-    const [error, setError] = useState('');
+    // const [error, setError] = useState(''); // Removed error state
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { login, user } = useContext(AuthContext);
+    const { notify } = useNotification(); // Initialized useNotification
     const navigate = useNavigate();
 
     React.useEffect(() => {
@@ -39,7 +41,7 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+        // setError(''); // Removed setError call
 
         if (!validateForm()) {
             return;
@@ -52,17 +54,14 @@ const Login = () => {
             console.log("DEBUG: Login result:", result);
             if (result.success) {
                 console.log("DEBUG: Login success, navigating...");
-                if (result.user.role === 'owner') {
-                    navigate('/owner-dashboard');
-                } else {
-                    navigate('/dashboard');
-                }
+                notify.success('Logged in successfully'); // Added success notification
+                // Navigation is handled by useEffect when user state updates to prevent race conditions
             } else {
                 console.log("DEBUG: Login failed with message:", result);
-                setError(result.message || 'Login failed');
+                notify.error(result.message || 'Login failed'); // Replaced setError with notify.error
             }
         } catch (err) {
-            setError('An unexpected error occurred.');
+            notify.error(err.response?.data?.message || 'An unexpected error occurred.'); // Replaced setError with notify.error
         } finally {
             setIsSubmitting(false);
         }
@@ -89,7 +88,7 @@ const Login = () => {
                             Welcome Back
                         </h2>
                         <p className="mt-2 text-sm text-gray-400">
-                            Or <Link to="/signup" className="font-medium text-[#00f6ff] hover:text-[#a100ff] transition-colors">create an account</Link>
+                            Or <Link to="/auth-entry" className="font-medium text-[#00f6ff] hover:text-[#a100ff] transition-colors">create an account</Link>
                         </p>
                     </div>
 
@@ -146,21 +145,6 @@ const Login = () => {
                                 {errors.password && <p className="absolute -bottom-5 left-1 text-xs text-red-500">{errors.password}</p>}
                             </div>
                         </div>
-
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                className="rounded-lg bg-red-500/10 border border-red-500/20 p-4"
-                            >
-                                <div className="flex items-center gap-2 text-red-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 flex-shrink-0">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                                    </svg>
-                                    <p className="text-sm font-medium">{error}</p>
-                                </div>
-                            </motion.div>
-                        )}
 
                         <div className={errors.password ? "mt-8" : ""}>
                             <button

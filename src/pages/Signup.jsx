@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import logo from '../assets/logo.png';
+import { useNotification } from '../context/NotificationContext';
 
 const Signup = () => {
     const [username, setUsername] = useState('');
@@ -11,8 +12,8 @@ const Signup = () => {
     const [isOwner, setIsOwner] = useState(false);
     const [companyName, setCompanyName] = useState('');
     const [errors, setErrors] = useState({});
-    const [error, setError] = useState('');
     const { register, user } = useContext(AuthContext);
+    const { notify } = useNotification();
     const navigate = useNavigate();
 
     React.useEffect(() => {
@@ -45,19 +46,18 @@ const Signup = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
 
         if (!validateForm()) {
             return;
         }
 
         const role = isOwner ? 'owner' : 'user';
-        const result = await register(username, email, password, role, isOwner ? companyName : null);
-
-        if (result.success) {
+        try {
+            await register(username, email, password, role, isOwner ? companyName : null);
+            notify.success('Account created! Please login.');
             navigate('/login');
-        } else {
-            setError(result.message);
+        } catch (error) {
+            notify.error(error.response?.data?.message || 'Signup failed');
         }
     };
 
