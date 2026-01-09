@@ -156,7 +156,7 @@ const DetailsPage = ({ type }) => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {!secondaryData || secondaryData.length === 0 ? (
+                                    {!secondaryData || !Array.isArray(secondaryData) || secondaryData.length === 0 ? (
                                         <tr>
                                             <td colSpan="4" className="px-6 py-8 text-center text-gray-500">No members in this group yet.</td>
                                         </tr>
