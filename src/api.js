@@ -33,12 +33,12 @@ api.interceptors.request.use(
         }
 
         // Debug Logs
-        console.group("🚀 API Request Debug Info");
-        console.log(`%c URL:`, 'font-weight: bold; color: #00f6ff;', `${config.baseURL}${config.url}`);
-        console.log(`%c Method:`, 'font-weight: bold; color: #a100ff;', config.method.toUpperCase());
-        console.log(`%c Headers:`, 'font-weight: bold; color: #ffa500;', config.headers);
-        console.log(`%c Payload:`, 'font-weight: bold; color: #00ff00;', config.data);
-        console.groupEnd();
+        // console.group("🚀 API Request Debug Info");
+        // console.log(`%c URL:`, 'font-weight: bold; color: #00f6ff;', `${config.baseURL}${config.url}`);
+        // console.log(`%c Method:`, 'font-weight: bold; color: #a100ff;', config.method.toUpperCase());
+        // console.log(`%c Headers:`, 'font-weight: bold; color: #ffa500;', config.headers);
+        // console.log(`%c Payload:`, 'font-weight: bold; color: #00ff00;', config.data);
+        // console.groupEnd();
 
         return config;
     },

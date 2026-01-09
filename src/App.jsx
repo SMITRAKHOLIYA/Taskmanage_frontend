@@ -23,6 +23,8 @@ import ProjectDetails from './pages/ProjectDetails';
 import { ThemeProvider } from './context/ThemeContext';
 import OwnerDashboard from './pages/OwnerDashboard';
 import CompanyManagement from './pages/CompanyManagement';
+import CustomerModule from './pages/CustomerModule';
+import DetailsPage from './pages/DetailsPage';
 
 /* New Auth Pages */
 import AuthEntry from './pages/AuthEntry';
@@ -81,6 +83,38 @@ function App() {
                     <OwnerRoute>
                       <MainLayout>
                         <CompanyManagement />
+                      </MainLayout>
+                    </OwnerRoute>
+                  } />
+
+                  <Route path="/customers" element={
+                    <OwnerRoute>
+                      <MainLayout>
+                        <CustomerModule />
+                      </MainLayout>
+                    </OwnerRoute>
+                  } />
+
+                  <Route path="/customer-groups/:id" element={
+                    <OwnerRoute>
+                      <MainLayout>
+                        <DetailsPage type="group" />
+                      </MainLayout>
+                    </OwnerRoute>
+                  } />
+
+                  <Route path="/customers/:id" element={
+                    <OwnerRoute>
+                      <MainLayout>
+                        <DetailsPage type="customer" />
+                      </MainLayout>
+                    </OwnerRoute>
+                  } />
+
+                  <Route path="/group-members/:id" element={
+                    <OwnerRoute>
+                      <MainLayout>
+                        <DetailsPage type="member" />
                       </MainLayout>
                     </OwnerRoute>
                   } />
