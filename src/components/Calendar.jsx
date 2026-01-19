@@ -12,7 +12,7 @@ const Calendar = ({ tasks, onDateClick }) => {
 
     const getFirstDayOfMonth = (date) => {
         const year = date.getFullYear();
-        const month = date.getMonth();
+        const month = date.getMonth(); 
         return new Date(year, month, 1).getDay();
     };
 
