@@ -19,7 +19,25 @@ const Login = () => {
 
     React.useEffect(() => {
         if (user) {
-            navigate(user.user.role === 'owner' ? '/owner-dashboard' : '/dashboard');
+            const userRole = user.user.role?.toLowerCase();
+
+            switch (userRole) {
+                case 'owner':
+                    navigate('/owner-dashboard');
+                    break;
+                case 'admin':
+                    navigate('/dashboard');
+                    break;
+                case 'manager':
+                    navigate('/dashboard');
+                    break;
+                case 'user':
+                    navigate('/dashboard');
+                    break;
+                default:
+                    navigate('/dashboard');
+                    break;
+            }
         }
     }, [user, navigate]);
 
@@ -49,15 +67,11 @@ const Login = () => {
 
         setIsSubmitting(true);
         try {
-            console.log("DEBUG: Calling login function with", email, password);
             const result = await login(email, password);
-            console.log("DEBUG: Login result:", result);
             if (result.success) {
-                console.log("DEBUG: Login success, navigating...");
                 notify.success('Logged in successfully'); // Added success notification
                 // Navigation is handled by useEffect when user state updates to prevent race conditions
             } else {
-                console.log("DEBUG: Login failed with message:", result);
                 notify.error(result.message || 'Login failed'); // Replaced setError with notify.error
             }
         } catch (err) {

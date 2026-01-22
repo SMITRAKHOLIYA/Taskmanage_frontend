@@ -23,13 +23,13 @@ const TaskExecutionStepper = ({ task, onUpdate }) => {
     const isAssignee = currentUser && String(currentUser.id) === String(task.assigned_to);
     const isManager = currentUser && ['admin', 'manager', 'owner'].includes(currentUser.role);
 
-    // const steps = [
-    //     { id: 'not_started', label: 'Assigned', icon: '📝' },
-    //     { id: 'started', label: 'In Progress', icon: '🚀' },
-    //     { id: 'local_done', label: 'Local Tested', icon: '🧪' },
-    //     { id: 'live_done', label: 'Live Deployed', icon: '🌐' },
-    //     { id: 'completed', label: 'Completed', icon: '✅' }
-    // ];
+    const steps = [
+        { id: 'not_started', label: 'Assigned', icon: '📝' },
+        { id: 'started', label: 'In Progress', icon: '🚀' },
+        { id: 'local_done', label: 'Local Tested', icon: '🧪' },
+        { id: 'live_done', label: 'Live Deployed', icon: '🌐' },
+        { id: 'completed', label: 'Completed', icon: '✅' }
+    ];
 
     // Helper to determine active step index
     const getCurrentStepIndex = () => {

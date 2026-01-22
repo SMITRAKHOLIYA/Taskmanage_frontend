@@ -30,6 +30,7 @@ import DetailsPage from './pages/DetailsPage';
 import AuthEntry from './pages/AuthEntry';
 import CompanySignup from './pages/CompanySignup';
 import JoinCompany from './pages/JoinCompany';
+import AcceptInvite from './pages/AcceptInvite';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
@@ -218,6 +219,7 @@ function App() {
                       </MainLayout>
                     </AdminRoute>
                   } />
+                  <Route path="/accept-invite/:token" element={<AcceptInvite />} />
 
                 </Routes>
               </div>

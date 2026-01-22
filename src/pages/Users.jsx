@@ -5,13 +5,14 @@ import { useNotification } from '../context/NotificationContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import InviteUserModal from '../components/InviteUserModal';
 
 const Users = () => {
     const [users, setUsers] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
-    const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'user' });
+    const [showInviteModal, setShowInviteModal] = useState(false);
     const [showActivityModal, setShowActivityModal] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
 
@@ -119,18 +120,10 @@ const Users = () => {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/users', formData);
-            setShowModal(false);
-            setFormData({ username: '', email: '', password: '', role: 'user' });
-            fetchUsers();
-            notify.success('User created successfully');
-        } catch (error) {
-            console.error("Error creating user", error);
-            notify.error(error.response?.data?.message || 'Failed to create user');
-        }
+    const handleInviteSuccess = () => {
+        // Maybe fetch invitations status if we had a list, but here for now just refresh users
+        // Although new users won't appear until they accept.
+        notify.success('Invitation sent. User will appear once they accept.');
     };
 
     const handleViewActivity = async (userId) => {
@@ -211,28 +204,34 @@ const Users = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                {(user.user.role === 'admin' || user.user.role === 'manager' || user.user.role === 'owner') && (
-                    <div className="flex gap-3">
-                        <button
-                            onClick={handleOpenPerformance}
-                            className="inline-flex items-center px-6 py-3 rounded-xl bg-white dark:bg-[#1a1f2e] border border-cyan-500/30 text-cyan-600 dark:text-[#00f6ff] font-bold shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:bg-cyan-50 dark:hover:bg-[#00f6ff]/10 transform hover:-translate-y-0.5 transition-all duration-200"
-                        >
-                            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            Performance Insights
-                        </button>
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-[#00f6ff] to-[#00c3ff] text-black font-bold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transform hover:-translate-y-0.5 transition-all duration-200"
-                        >
-                            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Add New User
-                        </button>
-                    </div>
-                )}
+                {(() => {
+                    const currentRole = user?.user?.role?.toLowerCase();
+                    console.log("Current User Role:", currentRole); // Debug
+                    const canInvite = ['admin', 'manager', 'owner'].includes(currentRole);
+
+                    return canInvite && (
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleOpenPerformance}
+                                className="inline-flex items-center px-6 py-3 rounded-xl bg-white dark:bg-[#1a1f2e] border border-cyan-500/30 text-cyan-600 dark:text-[#00f6ff] font-bold shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20 hover:bg-cyan-50 dark:hover:bg-[#00f6ff]/10 transform hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                Performance Insights
+                            </button>
+                            <button
+                                onClick={() => setShowInviteModal(true)}
+                                className="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-[#00f6ff] to-[#00c3ff] text-black font-bold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transform hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Invite User
+                            </button>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Table */}
@@ -405,69 +404,12 @@ const Users = () => {
                 )}
             </div>
 
-            {/* Add User Modal */}
-            <AnimatePresence>
-                {showModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => setShowModal(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-                        >
-                            <form onSubmit={handleSubmit} className="p-6">
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Add New User</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Username</label>
-                                        <input type="text" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                                            value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Email</label>
-                                        <input type="email" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                                            value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Password</label>
-                                        <input type="password" required className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                                            value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Role</label>
-                                        <select className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                                            value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
-                                            <option value="user" className="bg-white dark:bg-[#1a1f2e] text-gray-900 dark:text-white">User</option>
-                                            {user.user.role === 'owner' && (
-                                                <>
-                                                    <option value="manager" className="bg-white dark:bg-[#1a1f2e] text-gray-900 dark:text-white">Manager</option>
-                                                    <option value="admin" className="bg-white dark:bg-[#1a1f2e] text-gray-900 dark:text-white">Admin</option>
-                                                </>
-                                            )}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div className="mt-8 flex justify-end gap-3">
-                                    <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-                                        Cancel
-                                    </button>
-                                    <button type="submit" className="px-6 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium shadow-lg shadow-primary-600/20 transition-all">
-                                        Create User
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )
-                }
-            </AnimatePresence >
+            {/* Invite User Modal */}
+            <InviteUserModal
+                isOpen={showInviteModal}
+                onClose={() => setShowInviteModal(false)}
+                onInviteSuccess={handleInviteSuccess}
+            />
 
             {/* Activity Modal */}
             < AnimatePresence >
