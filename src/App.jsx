@@ -31,6 +31,8 @@ import AuthEntry from './pages/AuthEntry';
 import CompanySignup from './pages/CompanySignup';
 import JoinCompany from './pages/JoinCompany';
 import AcceptInvite from './pages/AcceptInvite';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
@@ -70,6 +72,8 @@ function App() {
                   <Route path="/auth-entry" element={<AuthEntry />} />
                   <Route path="/signup-company" element={<CompanySignup />} />
                   <Route path="/join" element={<JoinCompany />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password/:token" element={<ResetPassword />} />
 
                   {/* Protected Routes */}
                   <Route path="/owner-dashboard" element={

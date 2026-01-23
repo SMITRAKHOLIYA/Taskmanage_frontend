@@ -39,7 +39,9 @@ export const AuthProvider = ({ children }) => {
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000));
         return login(email, password, retryCount + 1);
       }
-      return { success: false, message: err.message || "Login failed" };
+
+      const backendMessage = err.response?.data?.message;
+      return { success: false, message: backendMessage || err.message || "Login failed" };
     }
   };
 

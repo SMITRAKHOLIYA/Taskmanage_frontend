@@ -160,6 +160,15 @@ const Login = () => {
                             </div>
                         </div>
 
+                        <div className="flex items-center justify-end">
+                            <div className="text-sm">
+                                <Link to="/forgot-password" className="font-medium text-[#00f6ff] hover:text-[#a100ff] transition-colors">
+                                    Forgot your password?
+                                </Link>
+                            </div>
+                        </div>
+
+
                         <div className={errors.password ? "mt-8" : ""}>
                             <button
                                 type="submit"
